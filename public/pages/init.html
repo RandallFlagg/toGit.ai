@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Git Init UI</title>
+    <script src="init.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <h1>Git Init Commands</h1>
+        <ul> <!-- existing list items --> </ul> <a href="index.html" class="back-link">Back to Index</a>
+    </div>
+    <div class="container">
+        <h1>Git Init Command</h1>
+        <form id="git-init-form">
+            <label title="-q | --quiet">
+                Quiet Mode
+                <input type="checkbox" id="quiet" name="quiet">
+                <span class="help" title="Suppress the command output.">?</span>
+            </label><br>
+
+            <label title="--bare">
+                Bare Repository
+                <input type="checkbox" id="bare" name="bare" onchange="toggleInputs()">
+                <span class="help" title="Create a bare repository.">?</span>
+            </label><br>
+
+            <label title="--template=<template-directory>">
+                Template Directory
+                <input type="text" id="template" name="template" placeholder="<template-directory>">
+                <span class="help" title="Specify the directory to use as a template.">?</span>
+            </label><br>
+
+            <label title="--separate-git-dir=<git-dir>">
+                Separate Git Directory
+                <input type="text" id="separate-git-dir" name="separate-git-dir" placeholder="<git-dir>"
+                    onchange="toggleInputs()">
+                <span class="help" title="Separate the git directory from the working directory.">?</span>
+            </label><br>
+
+            <label title="--object-format=<format>">
+                Object Format
+                <select id="object-format" name="object-format">
+                    <option value="sha1" selected>sha1</option>
+                    <option value="sha256">sha256</option>
+                </select>
+                <span class="help" title="Specify the object format (sha1 or sha256).">?</span>
+            </label><br>
+
+            <label title="--ref-format=<format>">
+                Ref Format
+                <select id="ref-format" name="ref-format">
+                    <option value="files" selected>files</option>
+                    <option value="reftable">reftable</option>
+                </select>
+                <span class="help" title="Specify the ref storage format (files or reftable).">?</span>
+            </label><br>
+
+            <label title="-b <branch-name> | --initial-branch=<branch-name>">
+                Initial Branch Name
+                <input type="text" id="branch-name" name="branch-name" placeholder="<branch-name>">
+                <span class="help" title="Specify the name for the initial branch.">?</span>
+            </label><br>
+
+            <label title="--shared[=<permissions>]">
+                Shared Permissions
+                <select id="shared" name="shared">
+                    <option value="false" selected>false</option>
+                    <option value="true">true</option>
+                    <option value="umask">umask</option>
+                    <option value="group">group</option>
+                    <option value="all">all</option>
+                    <option value="world">world</option>
+                    <option value="everybody">everybody</option>
+                    <option value="0777">0777</option>
+                </select>
+                <span class="help"
+                    title="Specify repository sharing (false, true, umask, group, all, world, everybody, 0777).">?</span>
+            </label><br>
+
+            <label title="<directory>">
+                Directory
+                <input type="text" id="directory" name="directory" placeholder="<directory>">
+                <span class="help" title="Specify the directory in which to create the repository.">?</span>
+            </label><br>
+
+            <button type="submit">Generate Command</button>
+        </form>
+        <pre id="command-output"></pre>
+    </div>
+</body>
+
+</html>

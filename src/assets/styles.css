@@ -1,0 +1,297 @@
+/* Global */
+.back-link {
+  display: block;
+  margin-top: 20px;
+  text-align: center;
+  color: #007bff;
+  text-decoration: none;
+  border-bottom: 1px dotted #007bff;
+}
+
+.back-link:hover {
+  text-decoration: underline;
+  background-color: #e0f7ff;
+}
+
+/* Index Page */
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f0f0f0;
+  padding: 20px;
+}
+
+.container {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  max-width: 800px;
+  margin: auto;
+}
+
+h1, h2 {
+  text-align: center;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+li {
+  margin: 10px 0;
+}
+
+a {
+  color: #007bff;
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* Revision Graph Page */
+body {
+  background-color: #ccc;
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+canvas {
+  border: 1px solid #ccc;
+  background-color: #f5f5f5;
+  /* background-color: white; */
+  /* TOOD: Do we need the display block? */
+  display: block;
+  margin: 20px auto;
+}
+
+#app {
+  padding: 20px;
+}
+
+#graph {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.context-menu {
+  background-color: white;
+  border: 1px solid #ccc;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  display: none;
+  padding: 10px;
+  position: absolute;
+  z-index: 1000;
+}
+
+.context-menu ul {
+  list-style: none;
+  padding: 5px;
+  margin: 0;
+}
+
+.context-menu ul li {
+  cursor: pointer;
+  /* margin: 5px 0; */
+  padding: 8px 12px;
+}
+
+.context-menu ul li:hover {
+  /* background-color: #ddd; */
+  background-color: #eee;
+}
+
+.node {
+  width: 100px;
+  height: 100px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border: 1px solid #000;
+  border-radius: 10px;
+  text-align: center;
+}
+
+.canvas-container {
+  width: 1000px;
+  /* Container width */
+  height: 500px;
+  /* Container height */
+  overflow: auto;
+  /* Enable scrolling */
+  border: 1px solid #ccc;
+  /* Optional: border to visualize the container */
+}
+
+.zoom-buttons {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 10;
+}
+
+.zoom-buttons button {
+  font-size: 20px;
+  margin: 5px;
+  padding: 10px;
+}
+
+/* Git Init page */
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f0f0f0;
+  padding: 20px;
+}
+
+.container {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  max-width: 500px;
+  margin: auto;
+}
+
+h1 {
+  text-align: center;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+}
+
+label {
+  margin: 10px 0;
+}
+
+button {
+  margin-top: 20px;
+  padding: 10px;
+  border: none;
+  background-color: #007bff;
+  color: white;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+pre {
+  background-color: #eee;
+  padding: 10px;
+  border-radius: 4px;
+  margin-top: 20px;
+}
+
+.help {
+  display: inline-block;
+  margin-left: 5px;
+  cursor: pointer;
+  color: #007bff;
+  border-bottom: 1px dotted #007bff;
+}
+
+.help:hover::after {
+  content: attr(title);
+  display: block;
+  position: absolute;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  padding: 5px;
+  border-radius: 3px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+  z-index: 1000;
+}
+
+/* Commit Page */
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f0f0f0;
+  padding: 20px;
+}
+
+.container {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  max-width: 800px;
+  margin: auto;
+}
+
+h1 {
+  text-align: center;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+li {
+  margin: 10px 0;
+}
+
+.command {
+  cursor: pointer;
+  color: #007bff;
+  text-decoration: none;
+  border-bottom: 1px dotted #007bff;
+}
+
+.command:hover {
+  text-decoration: underline;
+  background-color: #e0f7ff;
+}
+
+.help {
+  display: inline-block;
+  margin-left: 5px;
+  cursor: pointer;
+  color: #007bff;
+  border-bottom: 1px dotted #007bff;
+}
+
+.help:hover::after {
+  content: attr(title);
+  display: block;
+  position: absolute;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  padding: 5px;
+  border-radius: 3px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
+  z-index: 1000;
+}
+
+/* Styles for Flexbox Layout */
+.flex-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.flex-row label {
+  flex: 1 1 auto; /* Allow labels to grow and shrink */
+  display: flex;
+  align-items: center; /* Center content vertically */
+  justify-content: space-between; /* Space out content horizontally */
+  margin: 5px 0; /* Add some margin for spacing */
+}
+
+.flex-row label input {
+  margin-left: 10px; /* Space between label text and input */
+}
