@@ -1,14 +1,14 @@
 use serde::{Deserialize, Serialize};
 //TODO: Should this be here or in the js?
 #[derive(Serialize, Deserialize, Default)]
-pub struct AppConfig {
-    background_color: String,
-    local_branch_color: String,
-    active_branch_color: String,
-    remote_branch_color: String,
-    remote_tag_color: String,
-    local_tag_color: String,
-    type_order: Vec<String>, // Type priority order
+pub(crate) struct AppConfig {
+    pub background_color: String,
+    pub local_branch_color: String,
+    pub active_branch_color: String,
+    pub remote_branch_color: String,
+    pub remote_tag_color: String,
+    pub local_tag_color: String,
+    pub type_order: Vec<String>, // Type priority order
 }
 
 impl AppConfig {

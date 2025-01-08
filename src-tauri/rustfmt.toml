@@ -1,0 +1,25 @@
+# Control the maximum line width
+max_width = 180
+
+# Use spaces for indentation (specify the number of spaces per tab)
+tab_spaces = 4
+
+# Reorder import statements alphabetically
+reorder_imports = true
+
+# Use small heuristics for better readability
+use_small_heuristics = "Default"
+
+#Experimental options
+# Do not wrap comments
+# wrap_comments = true
+
+# Set brace style to default (always place braces on the same line)
+# brace_style = "PreferSameLine"
+
+# Use trailing commas in multiline contexts
+# trailing_comma = "Vertical"
+
+# Control blank lines between items
+# blank_lines_upper_bound = 1
+# blank_lines_lower_bound = 0

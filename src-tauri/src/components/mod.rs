@@ -1,3 +1,5 @@
-pub mod git_data;
-pub mod grapg_nodes;
-pub mod node_type;
+pub(crate) mod file_metadata;
+pub(crate) mod git_data;
+pub(crate) mod git_frontend_error;
+pub(crate) mod graph_node;
+pub(crate) mod node_type;

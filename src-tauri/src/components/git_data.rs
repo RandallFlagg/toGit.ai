@@ -1,3 +1,9 @@
+use crate::components::graph_node::GraphNode;
+use crate::logic::app_config::AppConfig;
+use git2::Repository;
+use serde::Serialize;
+use std::collections::HashMap;
+
 #[derive(Serialize, Debug)]
 struct GitData {
     nodes: Vec<usize>, // Map of node ID to GraphNode
@@ -11,14 +17,12 @@ impl GitData {
                 let mut nodes = Vec::new();
                 Ok(nodes)
             }
-            Err(e) => {
-                Err(format!("Failed to open repository: {}", e))
-            }
+            Err(e) => Err(format!("Failed to open repository: {}", e)),
         };
         result
     }
 
-    fn new(repo_path: String, config: &crate::config::AppConfig) -> Result<Self, String> {
+    fn new(repo_path: String, config: &AppConfig) -> Result<Self, String> {
         let nodes = Vec::new();
         let colors = HashMap::from([
             ("background".to_string(), config.background_color.clone()),

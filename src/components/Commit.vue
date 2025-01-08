@@ -70,8 +70,12 @@ const generateCommand = () => {
 };
 
 // Function to fetch data (simulate fetching data from somewhere else)
-const fetchData = () => {
-  const fetchedData = [
+const fetchData = async () => {
+  // const repo_path = "~/Ohad/Projects/OIV/OIV/"; // TODO: Adjust as needed
+  // const repo_path = ".."; // TODO: Adjust as needed
+  const repo_path = "D:/Ohad/Projects/toGit.ai/TAURI/TEST REPO";
+  const fetchedData = await window.__TAURI__.core.invoke('get_repo_changes', { repoPath: repo_path }); //TODO:From where should we get the repo path?
+  const fetchedData2 = [
     {
       id: 1, fileName: 'file1.txt', fileType: 'Text', status: 'Added', size: '2 KB',
       createdBy: 'User A', createdAt: '2024-01-01', modifiedBy: 'User B', modifiedAt: '2024-01-05',
@@ -100,6 +104,7 @@ const fetchData = () => {
     // Other dummy data items...
   ];
   tableData.value = fetchedData;
+  debugger;
 };
 
 onMounted(() => {

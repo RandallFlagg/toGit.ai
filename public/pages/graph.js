@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   let gitData;
   async function fetchGitData() {
     const repo_path = "~/Ohad/Projects/OIV/OIV/"; // TODO: Adjust as needed
-    const response = await window.__TAURI__.core.invoke('get_git_data', { repoPath: repo_path }); //window.__TAURI__.invoke i nt correct and gives an error
+    const response = await window.__TAURI__.core.invoke('get_git_data', { repoPath: repo_path }); //TODO: From where should we get the repo path?
     if (false) {
       const MygitData = {
         nodes: {
