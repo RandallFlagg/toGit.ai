@@ -17,20 +17,14 @@
             <th @click="sortTable('size')">
               Size
             </th>
-            <th @click="sortTable('createdBy')">
-              Created By
+            <th @click="sortTable('full_file_path')">
+              Full File Path
             </th>
-            <th @click="sortTable('createdAt')">
-              Created At
+            <th @click="sortTable('relative_file_path')">
+              Relative File Path
             </th>
-            <th @click="sortTable('modifiedBy')">
-              Modified By
-            </th>
-            <th @click="sortTable('modifiedAt')">
-              Modified At
-            </th>
-            <th @click="sortTable('comments')">
-              Comments
+            <th @click="sortTable('fileExtension')">
+              File Extension
             </th>
           </tr>
         </thead>
@@ -46,22 +40,20 @@
                 type="checkbox"
               >
             </td>
-            <td>{{ item.fileName }}</td>
-            <td>{{ item.fileType }}</td>
-            <td>{{ item.status }}</td>
+            <td>{{ item.file_name }}</td>
+            <td>{{ item.file_type }}</td>
+            <td>{{ item.file_status }}</td>
             <td>{{ item.size }}</td>
-            <td>{{ item.createdBy }}</td>
-            <td>{{ item.createdAt }}</td>
-            <td>{{ item.modifiedBy }}</td>
-            <td>{{ item.modifiedAt }}</td>
-            <td>{{ item.comments }}</td>
+            <td>{{ item.full_file_path }}</td>
+            <td>{{ item.relative_file_path }}</td>
+            <td>{{ item.file_extension }}</td>
           </tr>
         </tbody>
       </table>
     </div>
     <div class="preview-pane">
       <div v-if="selectedItem">
-        <h3>Preview: {{ selectedItem.fileName }}</h3>
+        <h3>Preview: {{ selectedItem.file_name }}</h3>
         <p>{{ selectedItem.preview }}</p>
       </div>
       <div v-else>
@@ -72,7 +64,6 @@
 </template>
 
 <script>
-console.log("CCC")
 export default {
   name: 'SortableTable',
   props: {
