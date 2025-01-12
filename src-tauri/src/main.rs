@@ -28,11 +28,11 @@ use crate::components::git_frontend_error::GitFrontendError;
 use crate::git_frontend::git_frontend_module::get_repo_status;
 use crate::logic::app_config::AppConfig;
 fn main() {
-    let args: Vec<String> = env::args().collect();
+    // let args: Vec<String> = env::args().collect();
     // let path = &args[1];
-    let path = "../../TEST REPO";
-    println!("{:?}", main_filesystem(path).map_err(|e| e.to_string()));
-    //main_tauri();
+    // let path = "../../TEST REPO";
+    // println!("{:?}", main_filesystem(path).map_err(|e| e.to_string()));
+    main_tauri();
 }
 
 fn main_filesystem(full_file_path: &str) -> Result<(), GitFrontendError> {
@@ -84,6 +84,7 @@ fn main_filesystem(full_file_path: &str) -> Result<(), GitFrontendError> {
 //         .expect("error while running tauri application");
 // }
 
+//TODO: Add an option to send the repo path from the command line
 fn main_tauri() {
     tauri::Builder::default()
         .setup(|app| {

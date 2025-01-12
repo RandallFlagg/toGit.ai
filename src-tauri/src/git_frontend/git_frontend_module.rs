@@ -11,40 +11,33 @@ use std::collections::{HashMap, HashSet};
 use std::fs::{self, metadata, File};
 use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::SystemTime;
 use std::{io, path};
-use std::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::components::file_metadata::FileMetadata;
 use crate::components::git_frontend_error::GitFrontendError;
 
-// fn get_modified_files(repo_path: &Path) -> Result<Vec<String>, git2::Error> {
-//     // Open the repository
-//     let repo = Repository::open(repo_path)?;
-
-//     // Get the index (staging area)
-//     let index = repo.index()?;
-
-//     // Get the list of modified files
-//     let mut modified_files = Vec::new();
-//     for entry in index.iter() {
-//         // let path = entry.path().ok_or(git2::Error::from_str("Invalid UTF-8 path"))?;
-//         let path_str = std::str::from_utf8(&entry.path).map_err(|_| git2::Error::from_str("Invalid UTF-8 path"))?;
-//         let path = Path::new(path_str);
-//         let status = repo.status_file(path)?;
-
-//         // Check if the file is modified
-//         if status.is_index_modified() || status.is_wt_modified() {
-//             modified_files.push(path.to_string_lossy().to_string());
-//         }
-//     }
-
-//     Ok(modified_files)
-// }
-
+/// Retrieves the status of a Git repository at the specified path.
+///
+/// # Arguments
+///
+/// * `repo_path` - A reference to a `Path` that holds the path to the Git repository.
+///
+/// # Returns
+///
+/// * `Result<Vec<FileMetadata>, GitFrontendError>` - A vector of `FileMetadata` on success, or a `GitFrontendError` on failure.
 #[tauri::command]
 pub fn get_repo_status(repo_path: &Path) -> Result<Vec<FileMetadata>, String> {
-    println!("A");
+    if !repo_path.exists() || !repo_path.is_dir() {
+        return Err("Invalid repository path".to_string());
+    }
+
+    // Call the internal function to get the repository status
+    // match get_repo_status_internal(repo_path) {
+    //     Ok(status) => Ok(status),
+    //     Err(e) => Err(e), // Propagate the error from the internal function
+    // }
     get_repo_status_internal(repo_path).map_err(|e| e.to_string())
 }
 
@@ -70,7 +63,7 @@ fn get_repo_status_internal(repo_path: &Path) -> Result<Vec<FileMetadata>, GitFr
             _ if status.contains(Status::CONFLICTED) => "Conflicted",
             _ => continue, //"Unknown"
         };
-        let file = get_file_metadata(&full_file_path, change_type)?;
+        let file = get_file_metadata(&full_file_path, change_type, repo_path)?;
         changes.push(file);
     }
 
@@ -93,7 +86,7 @@ fn show_menu() -> Vec<&'static str> {
     unimplemented!("This function is not yet implemented.");
 }
 
-fn get_file_metadata(full_file_path: &PathBuf, change_type: &str) -> Result<FileMetadata, GitFrontendError> {
+fn get_file_metadata(full_file_path: &PathBuf, status: &str, repo_root: &Path) -> Result<FileMetadata, GitFrontendError> {
     static ID_COUNTER: AtomicUsize = AtomicUsize::new(1);
     let file_name = full_file_path
         .file_name()
@@ -108,20 +101,22 @@ fn get_file_metadata(full_file_path: &PathBuf, change_type: &str) -> Result<File
     let modified_at = system_time_to_naive_date_time(modified_time);
     let file_metadata = FileMetadata {
         id: ID_COUNTER.fetch_add(1, Ordering::SeqCst),
-        change_type: change_type.to_string(),
+        // change_type: change_type.to_string(),
         file_name: file_name,
         full_file_path: full_file_path.to_string_lossy().to_string(), //TODO: Convert to base64 in order to handle non utf-8 path. Need to check on what OS this is valid to make sure we need to handle this.
+        relative_file_path: full_file_path.strip_prefix(repo_root).unwrap_or(full_file_path).to_string_lossy().to_string(), //TODO: Make this path relative to the file and not as it is now, full. //TODO: Convert to base64 in order to handle non utf-8 path. Need to check on what OS this is valid to make sure we need to handle this.
         file_extension: full_file_path.extension().and_then(|ext| ext.to_str()).unwrap_or("").to_string(),
         file_type: file_format,
-        status: String::from("Added"),                         //TODO: Take from get_repo_changes
-        size: format!("{} KB", file.metadata()?.len() / 1024), // Get size in KB //TODO: Format
-        created_by: String::from("User A"),
-        created_at: String::from("2024-01-01T00:00:00Z"),
-        modified_by: String::from("User B"),
-        modified_at: modified_at.to_string(),
-        comments: String::from("No comments"),
-        preview: "Loading...".to_string(), // Use file content as preview
-        selected: false,
+        file_status: status.to_string(),
+        size: file.metadata()?.len().to_string()
+        // size: format!("{:.2} KB", file.metadata()?.len() as f64 / 1024.0), // Get size in KB //TODO: Format
+                                                               // created_by: String::from("User A"),
+                                                               // created_at: String::from("2024-01-01T00:00:00Z"),
+                                                               // modified_by: String::from("User B"),
+                                                               // modified_at: modified_at.to_string(),
+                                                               // comments: String::from("No comments"),
+                                                               // preview: "Loading...".to_string(), // Use file content as preview
+                                                               // selected: false,
     };
 
     Ok(file_metadata)

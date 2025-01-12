@@ -1,4 +1,5 @@
 use chrono::ParseError;
+// use tauri::ipc::InvokeError;
 use std::{fmt, io};
 use thiserror::Error;
 
@@ -10,8 +11,36 @@ pub(crate) enum GitFrontendError {
     Parse(#[from] chrono::ParseError),
     #[error("Git2 error")]
     Git2(#[from] git2::Error),
+    #[error("Invalid repository path")]
+    InvalidPath(String),
     #[error("Other error")]
     Other(String),
+}
+
+// impl fmt::Display for GitFrontendError {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         match self {
+//             GitFrontendError::Io(err) => write!(f, "IO error: {}", err),
+//             GitFrontendError::Parse(err) => write!(f, "Parse error: {}", err),
+//             GitFrontendError::Git2(err) => write!(f, "Git2 error: {}", err),
+//             GitFrontendError::InvalidPath(msg) => write!(f, "Invalid path: {}", msg),
+//             GitFrontendError::Other(msg) => write!(f, "Other error: {}", msg),
+//         }
+//     }
+// }
+
+// impl Into<String> for GitFrontendError {
+//     fn into(self) -> String {
+//         //InvokeError::from(self.to_string())
+//         // Ok("Error")
+//         "Error".to_string()
+//     }
+// }
+
+impl From<String> for GitFrontendError {
+    fn from(err: String) -> GitFrontendError {
+        GitFrontendError::Other(err)
+    }
 }
 
 // impl fmt::Display for FileError {
@@ -35,9 +64,3 @@ pub(crate) enum GitFrontendError {
 //         FileError::Parse(err)
 //     }
 // }
-
-impl From<String> for GitFrontendError {
-    fn from(err: String) -> GitFrontendError {
-        GitFrontendError::Other(err)
-    }
-}

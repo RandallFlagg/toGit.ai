@@ -7,19 +7,18 @@ use std::collections::HashMap;
 #[derive(Debug, Serialize)]
 pub(crate) struct FileMetadata {
     pub id: usize,
-    pub change_type: String,
     pub file_name: String,
     pub file_extension: String,
     pub file_type: String,
-    pub status: String,
+    pub file_status: String,
     pub size: String,
-    pub created_by: String,
-    pub created_at: String, //rfc_339
-    pub modified_by: String,
-    pub modified_at: String, //rfc_339
-    pub comments: String,
-    pub preview: String,
-    pub selected: bool,
+    // pub created_by: String,
+    // pub created_at: String, //rfc_339
+    // pub modified_by: String,
+    // pub modified_at: String, //rfc_339
+    // pub comments: String,
+    // pub preview: String,
+    // pub selected: bool,
     pub full_file_path: String,
     pub relative_file_path: String,
 }
