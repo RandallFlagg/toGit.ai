@@ -1,4 +1,5 @@
 use chrono::ParseError;
+use tauri::ipc::InvokeError;
 // use tauri::ipc::InvokeError;
 use std::{fmt, io};
 use thiserror::Error;
@@ -29,13 +30,13 @@ pub(crate) enum GitFrontendError {
 //     }
 // }
 
-// impl Into<String> for GitFrontendError {
-//     fn into(self) -> String {
-//         //InvokeError::from(self.to_string())
-//         // Ok("Error")
-//         "Error".to_string()
-//     }
-// }
+impl Into<InvokeError> for GitFrontendError {
+    fn into(self) -> InvokeError {
+        InvokeError::from(self.to_string())
+        // Ok("Error")
+        //"Error".to_string()
+    }
+}
 
 impl From<String> for GitFrontendError {
     fn from(err: String) -> GitFrontendError {

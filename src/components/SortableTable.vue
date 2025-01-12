@@ -54,7 +54,7 @@
     <div class="preview-pane">
       <div v-if="selectedItem">
         <h3>Preview: {{ selectedItem.file_name }}</h3>
-        <p>{{ selectedItem.preview }}</p>
+        <p>{{ previewText }}</p>
       </div>
       <div v-else>
         <h3>Select an item to preview</h3>
@@ -76,7 +76,8 @@ export default {
     return {
       sortColumn: '',
       sortOrder: 'asc',
-      selectedItem: null
+      selectedItem: null,
+      previewText: ''
     };
   },
   computed: {
@@ -99,6 +100,11 @@ export default {
     },
     selectItem(item) {
       this.selectedItem = item;
+      this.getFileContent(item.full_file_path);
+    },
+    async getFileContent(fullFilePath) {
+      const fileContent = await window.__TAURI__.core.invoke('get_file_content', { fullFilePath: fullFilePath });
+      this.previewText = fileContent;
     }
   }
 };

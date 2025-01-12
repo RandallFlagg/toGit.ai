@@ -3,6 +3,10 @@ use file_format::FileFormat;
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 use git2::{BranchType, Oid, Repository, Status};
 // use libgit2_sys::{git_repository, git_repository};
+use crate::components::file_metadata::FileMetadata;
+use crate::components::git_frontend_error::GitFrontendError;
+use binaryornot::is_binary;
+use infer;
 use log::debug;
 use mime_guess::from_path;
 use serde::Serialize;
@@ -14,9 +18,29 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::SystemTime;
 use std::{io, path};
+use std::sync::Mutex;
+use lazy_static::lazy_static;
 
-use crate::components::file_metadata::FileMetadata;
-use crate::components::git_frontend_error::GitFrontendError;
+// #[macro_use]
+// extern crate lazy_static;
+
+lazy_static! {
+    static ref FILE_FORMAT_CACHE: Mutex<HashMap<PathBuf, String>> = Mutex::new(HashMap::new());
+}
+
+
+#[tauri::command]
+pub fn get_file_content(full_file_path: PathBuf) -> Result<String, GitFrontendError> {
+    let mut contents=String::new();
+    if is_binary(&full_file_path).expect("unable to read file") {
+        contents = "Binary file".to_string();
+    } else {
+        let mut file = fs::File::open(&full_file_path).map_err(|e| e.to_string())?;
+        file.read_to_string(&mut contents).map_err(|e| e.to_string())?;
+    }
+
+    Ok(contents)
+}
 
 /// Retrieves the status of a Git repository at the specified path.
 ///
@@ -95,7 +119,7 @@ fn get_file_metadata(full_file_path: &PathBuf, status: &str, repo_root: &Path) -
         .expect("Invalid UTF-8 in file name")
         .to_string();
     let file = fs::File::open(full_file_path)?;
-    let file_format = determine_file_format(full_file_path)?;
+    let file_format = determine_file_format2(full_file_path)?; //TODO: Cache the result of this call
     let metadata = metadata(full_file_path)?;
     let modified_time = metadata.modified().unwrap_or(SystemTime::now());
     let modified_at = system_time_to_naive_date_time(modified_time);
@@ -108,28 +132,25 @@ fn get_file_metadata(full_file_path: &PathBuf, status: &str, repo_root: &Path) -
         file_extension: full_file_path.extension().and_then(|ext| ext.to_str()).unwrap_or("").to_string(),
         file_type: file_format,
         file_status: status.to_string(),
-        size: file.metadata()?.len().to_string()
-        // size: format!("{:.2} KB", file.metadata()?.len() as f64 / 1024.0), // Get size in KB //TODO: Format
-                                                               // created_by: String::from("User A"),
-                                                               // created_at: String::from("2024-01-01T00:00:00Z"),
-                                                               // modified_by: String::from("User B"),
-                                                               // modified_at: modified_at.to_string(),
-                                                               // comments: String::from("No comments"),
-                                                               // preview: "Loading...".to_string(), // Use file content as preview
-                                                               // selected: false,
+        size: file.metadata()?.len().to_string(), // size: format!("{:.2} KB", file.metadata()?.len() as f64 / 1024.0), // Get size in KB //TODO: Format
+                                                  // created_by: String::from("User A"),
+                                                  // created_at: String::from("2024-01-01T00:00:00Z"),
+                                                  // modified_by: String::from("User B"),
+                                                  // modified_at: modified_at.to_string(),
+                                                  // comments: String::from("No comments"),
+                                                  // preview: "Loading...".to_string(), // Use file content as preview
+                                                  // selected: false,
     };
 
     Ok(file_metadata)
 }
 
-fn read_content_of_file_for_preview(full_file_path: &PathBuf) -> Result<String, io::Error> {
-    let mut file = fs::File::open(full_file_path)?;
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
-    Ok(contents)
+fn determine_file_format(file_path: &Path) -> io::Result<String> {
+    determine_file_format1(file_path)
 }
 
-fn determine_file_format(file_path: &Path) -> io::Result<String> {
+//Using FileFormat and MimeGuess
+fn determine_file_format1(file_path: &Path) -> io::Result<String> {
     let mut file = File::open(file_path)?;
     let mut buffer = vec![0; 512]; // Define a buffer with 512 bytes
     let bytes_read = file.read(&mut buffer)?;
@@ -154,6 +175,40 @@ fn determine_file_format(file_path: &Path) -> io::Result<String> {
             .unwrap_or_else(|| "Unknown file type".to_string());
     }
     Ok(file_format)
+}
+
+//Caching
+fn determine_file_format2(file_path: &Path) -> Result<String, GitFrontendError> {
+    let mut cache = FILE_FORMAT_CACHE.lock().unwrap();
+    if let Some(format) = cache.get(file_path) {
+        return Ok(format.clone());
+    }
+
+    let mut file = File::open(file_path).map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
+    let mut buffer = [0; 512];
+    file.read(&mut buffer).map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))?;
+
+    let format = if let Some(kind) = infer::get(&buffer) {
+        kind.mime_type().to_string()
+    } else {
+        "unknown".to_string()
+    };
+
+    cache.insert(file_path.to_path_buf(), format.clone());
+    Ok(format)
+}
+
+//Using infer
+fn determine_file_format3(file_path: &Path) -> io::Result<String> {
+    let mut file = File::open(file_path)?;
+    let mut buffer = [0; 512]; // Read the first 512 bytes
+    file.read(&mut buffer)?;
+
+    if let Some(kind) = infer::get(&buffer) {
+        return Ok(kind.mime_type().to_string());
+    }
+
+    Ok("unknown".to_string())
 }
 
 fn system_time_to_naive_date_time(st: SystemTime) -> DateTime<Utc> {
