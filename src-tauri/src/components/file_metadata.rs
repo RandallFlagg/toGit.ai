@@ -6,10 +6,10 @@ use std::collections::HashMap;
 //TODO: Should all the String be changed to &str?
 #[derive(Debug, Serialize)]
 pub(crate) struct FileMetadata {
-    pub id: u32,
+    pub id: usize,
     pub change_type: String,
     pub file_name: String,
-    pub file_extenstion: String,
+    pub file_extension: String,
     pub file_type: String,
     pub status: String,
     pub size: String,
@@ -20,6 +20,8 @@ pub(crate) struct FileMetadata {
     pub comments: String,
     pub preview: String,
     pub selected: bool,
+    pub full_file_path: String,
+    pub relative_file_path: String,
 }
 
 impl FileMetadata {

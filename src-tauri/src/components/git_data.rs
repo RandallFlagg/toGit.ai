@@ -14,7 +14,7 @@ impl GitData {
     fn generate_git_graph(repo_path: &str) -> Result<Vec<GraphNode>, String> {
         let result = match Repository::discover(repo_path) {
             Ok(repo) => {
-                let mut nodes = Vec::new();
+                let nodes = Vec::new();
                 Ok(nodes)
             }
             Err(e) => Err(format!("Failed to open repository: {}", e)),

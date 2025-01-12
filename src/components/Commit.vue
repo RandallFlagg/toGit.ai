@@ -72,8 +72,7 @@ const generateCommand = () => {
 // Function to fetch data (simulate fetching data from somewhere else)
 const fetchData = async () => {
   // const repo_path = "~/Ohad/Projects/OIV/OIV/"; // TODO: Adjust as needed
-  // const repo_path = ".."; // TODO: Adjust as needed
-  const repo_path = "D:/Ohad/Projects/toGit.ai/TAURI/TEST REPO";
+  const repo_path = "../TEST REPO"; // TODO: Adjust as needed
   const fetchedData = await window.__TAURI__.core.invoke('get_repo_changes', { repoPath: repo_path }); //TODO:From where should we get the repo path?
   const fetchedData2 = [
     {

@@ -10,9 +10,10 @@ use shellexpand;
 use std::collections::{HashMap, HashSet};
 use std::fs::{self, metadata, File};
 use std::io::Read;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::SystemTime;
 use std::{io, path};
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 use crate::components::file_metadata::FileMetadata;
 use crate::components::git_frontend_error::GitFrontendError;
@@ -43,23 +44,21 @@ use crate::components::git_frontend_error::GitFrontendError;
 
 #[tauri::command]
 pub fn get_repo_status(repo_path: &Path) -> Result<Vec<FileMetadata>, String> {
+    println!("A");
     get_repo_status_internal(repo_path).map_err(|e| e.to_string())
 }
 
 fn get_repo_status_internal(repo_path: &Path) -> Result<Vec<FileMetadata>, GitFrontendError> {
     // Open the repository
     let repo = Repository::open(repo_path)?;
-
     // Get the status options and status entries
     let statuses = repo.statuses(None)?;
-
     // Get the list of changes
     let mut changes = Vec::new();
-
     for entry in statuses.iter() {
-        let path = entry.path().ok_or(git2::Error::from_str("Invalid UTF-8 path"))?;
+        let mut full_file_path = PathBuf::from(repo_path);
+        full_file_path.push(entry.path().ok_or(git2::Error::from_str("Invalid UTF-8 path"))?);
         let status = entry.status();
-
         // Determine the type of change
         let change_type = match status {
             _ if status.contains(Status::INDEX_NEW) || status.contains(Status::WT_NEW) => "Untracked",
@@ -71,12 +70,7 @@ fn get_repo_status_internal(repo_path: &Path) -> Result<Vec<FileMetadata>, GitFr
             _ if status.contains(Status::CONFLICTED) => "Conflicted",
             _ => continue, //"Unknown"
         };
-
-        let file = get_file_metadata(path, change_type)?;
-        // changes.push((
-        //     Path::new(path).to_string_lossy().to_string(),
-        //     change_type.to_string(),
-        // )); //TODO: change to path?
+        let file = get_file_metadata(&full_file_path, change_type)?;
         changes.push(file);
     }
 
@@ -99,23 +93,25 @@ fn show_menu() -> Vec<&'static str> {
     unimplemented!("This function is not yet implemented.");
 }
 
-fn get_file_metadata(full_file_path: &str, change_type: &str) -> Result<FileMetadata, GitFrontendError> {
-    let file_path = Path::new(full_file_path);
-    let file_name = file_path.file_name().unwrap().to_str().unwrap().to_string();
-    let mut file = fs::File::open(file_path)?;
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
-    let file_format = determine_file_format(file_path)?;
-    let metadata = metadata(file_path)?;
+fn get_file_metadata(full_file_path: &PathBuf, change_type: &str) -> Result<FileMetadata, GitFrontendError> {
+    static ID_COUNTER: AtomicUsize = AtomicUsize::new(1);
+    let file_name = full_file_path
+        .file_name()
+        .expect("File not found")
+        .to_str()
+        .expect("Invalid UTF-8 in file name")
+        .to_string();
+    let file = fs::File::open(full_file_path)?;
+    let file_format = determine_file_format(full_file_path)?;
+    let metadata = metadata(full_file_path)?;
     let modified_time = metadata.modified().unwrap_or(SystemTime::now());
     let modified_at = system_time_to_naive_date_time(modified_time);
     let file_metadata = FileMetadata {
-        id: 1,
+        id: ID_COUNTER.fetch_add(1, Ordering::SeqCst),
         change_type: change_type.to_string(),
         file_name: file_name,
-        file_extenstion: file_path.extension().and_then(|ext| ext.to_str()).unwrap_or("").to_string(),
+        full_file_path: full_file_path.to_string_lossy().to_string(), //TODO: Convert to base64 in order to handle non utf-8 path. Need to check on what OS this is valid to make sure we need to handle this.
+        file_extension: full_file_path.extension().and_then(|ext| ext.to_str()).unwrap_or("").to_string(),
         file_type: file_format,
         status: String::from("Added"),                         //TODO: Take from get_repo_changes
         size: format!("{} KB", file.metadata()?.len() / 1024), // Get size in KB //TODO: Format
@@ -124,16 +120,29 @@ fn get_file_metadata(full_file_path: &str, change_type: &str) -> Result<FileMeta
         modified_by: String::from("User B"),
         modified_at: modified_at.to_string(),
         comments: String::from("No comments"),
-        preview: contents, // Use file content as preview
+        preview: "Loading...".to_string(), // Use file content as preview
         selected: false,
     };
+
     Ok(file_metadata)
+}
+
+fn read_content_of_file_for_preview(full_file_path: &PathBuf) -> Result<String, io::Error> {
+    let mut file = fs::File::open(full_file_path)?;
+    let mut contents = String::new();
+    file.read_to_string(&mut contents)?;
+    Ok(contents)
 }
 
 fn determine_file_format(file_path: &Path) -> io::Result<String> {
     let mut file = File::open(file_path)?;
-    let mut buffer = Vec::new();
-    file.read_to_end(&mut buffer)?;
+    let mut buffer = vec![0; 512]; // Define a buffer with 512 bytes
+    let bytes_read = file.read(&mut buffer)?;
+    if bytes_read == 0 {
+        //TODO: Decide how we want to handle this
+        return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "File is empty or could not be read"));
+    }
+    buffer.truncate(bytes_read);
 
     let file_format;
 
