@@ -33,7 +33,7 @@ const routes = [
   {
     path: '/test',
     name: 'tets',
-    component: { template: '<div></div>', beforeRouteEnter(to, from, next) { window.location.href = '/pages/test.html'; } }
+    component: { template: '<div></div>', beforeRouteEnter(to, from, next) { window.location.href = 'test.html'; } }
   },
   {
     path: '/revision-graph',
