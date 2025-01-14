@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use file_format::FileFormat;
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-use git2::{BranchType, Oid, Repository, Status};
+use git2::{Repository, DiffOptions, Error, DiffFormat, DiffLineType, BranchType, Oid, Status};
 // use libgit2_sys::{git_repository, git_repository};
 use crate::components::file_metadata::FileMetadata;
 use crate::components::git_frontend_error::GitFrontendError;
@@ -35,8 +35,9 @@ pub fn get_file_content(full_file_path: PathBuf) -> Result<String, GitFrontendEr
     if is_binary(&full_file_path).expect("unable to read file") {
         contents = "Binary file".to_string();
     } else {
-        let mut file = fs::File::open(&full_file_path).map_err(|e| e.to_string())?;
-        file.read_to_string(&mut contents).map_err(|e| e.to_string())?;
+        // let mut file = fs::File::open(&full_file_path).map_err(|e| e.to_string())?;
+        // file.read_to_string(&mut contents).map_err(|e| e.to_string())?;
+        generate_diff(repo_path, full_file_path)?;
     }
 
     Ok(contents)
@@ -52,17 +53,17 @@ pub fn get_file_content(full_file_path: PathBuf) -> Result<String, GitFrontendEr
 ///
 /// * `Result<Vec<FileMetadata>, GitFrontendError>` - A vector of `FileMetadata` on success, or a `GitFrontendError` on failure.
 #[tauri::command]
-pub fn get_repo_status(repo_path: &Path) -> Result<Vec<FileMetadata>, String> {
+pub fn get_repo_status(repo_path: &Path) -> Result<Vec<FileMetadata>, GitFrontendError> {
     if !repo_path.exists() || !repo_path.is_dir() {
         return Err("Invalid repository path".to_string());
     }
 
     // Call the internal function to get the repository status
-    // match get_repo_status_internal(repo_path) {
-    //     Ok(status) => Ok(status),
-    //     Err(e) => Err(e), // Propagate the error from the internal function
-    // }
-    get_repo_status_internal(repo_path).map_err(|e| e.to_string())
+    match get_repo_status_internal(repo_path) {
+        Ok(status) => Ok(status),
+        Err(e) => Err(e), // Propagate the error from the internal function
+    }
+    // get_repo_status_internal(repo_path).map_err(|e| e.to_string())
 }
 
 fn get_repo_status_internal(repo_path: &Path) -> Result<Vec<FileMetadata>, GitFrontendError> {
@@ -214,4 +215,69 @@ fn determine_file_format3(file_path: &Path) -> io::Result<String> {
 fn system_time_to_naive_date_time(st: SystemTime) -> DateTime<Utc> {
     let datetime: DateTime<Utc> = st.into();
     DateTime::from_timestamp(datetime.timestamp(), datetime.timestamp_subsec_nanos()).unwrap()
+}
+
+/// Generates a diff string between a file in the working tree and the index.
+/// If the file is not in the working tree, it returns the diff against an empty file.
+/// The file name should be relative to the repo path
+fn generate_diff(repo_path: &str, file_name: &str) -> Result<String, Error> {
+    // Open the repository
+    let repo = Repository::open(repo_path)?;
+
+    // Get the index
+    let index = repo.index()?;
+
+    // Get the OID of the file in the index
+    let oid = index.get_path(Path::new(file_name), 0)
+        .ok_or_else(|| Error::from_str("File not found in index"))?
+        .id;
+
+    // Read the file content from the index
+    let blob = repo.find_blob(oid)?;
+    let index_content = String::from_utf8_lossy(blob.content());
+
+    // Read the file content from the working tree
+    let working_tree_content = fs::read_to_string(Path::new(repo_path).join(file_name))
+        .unwrap_or_else(|_| String::new());
+
+    // Generate the diff
+    let diff =generate_diff_with_git2(repo_path, file_name)?;
+
+    Ok(diff)
+}
+
+fn generate_diff_with_git2(repo_path: &str, file_name: &str) -> Result<String, Error> {
+    // Open the repository
+    let repo = Repository::open(repo_path)?;
+
+    // Prepare diff options
+    let mut diff_options = DiffOptions::new();
+    diff_options.pathspec(file_name);
+
+    // Generate the diff
+    let diff = repo.diff_index_to_workdir(None, Some(&mut diff_options))?;
+
+    // Collect the diff output
+    let mut diff_output = String::new();
+    diff.print(DiffFormat::Patch, |_, _, line| {
+        let prefix = match line.origin() {
+            '+' => '+',
+            '-' => '-',
+            ' ' => ' ',
+            '?' => '?',
+            '!' => '!',
+            '~' => '~',
+            '/' => '/',
+            '\\' => '\\',
+            '`' => '`',
+            'R' => 'R',
+            // ' ' => ' ',
+             // Add more cases as needed
+            _ => ' ',
+        };
+        diff_output.push_str(&format!("{}{}", prefix, std::str::from_utf8(line.content()).unwrap()));
+        true
+    })?;
+
+    Ok(diff_output)
 }

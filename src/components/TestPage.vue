@@ -1,6 +1,11 @@
 <script setup lang="ts">
+// debugger;
 import { ref, onMounted } from 'vue';
 import SortableTable from './SortableTable.vue';
+import DiffViewer from './DiffViewer.vue';
+// import * as mykey from '../assets/diff2html-ui.min.js';
+
+// console.log(mykey.AAA)
 
 // Define a reactive reference for table data
 const tableData = ref([]);
@@ -48,7 +53,8 @@ onMounted(() => {
 <template>
   START
   <main id="TEST">
-    <SortableTable :items="tableData" />
+    <DiffViewer />
+    <!-- <SortableTable :items="tableData" /> -->
   </main>
   END
 </template>

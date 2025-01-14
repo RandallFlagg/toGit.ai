@@ -28,7 +28,12 @@ use crate::components::git_frontend_error::GitFrontendError;
 use crate::git_frontend::git_frontend_module::get_repo_status;
 use crate::git_frontend::git_frontend_module::get_file_content;
 use crate::logic::app_config::AppConfig;
+
 fn main() {
+    // match generate_diff("../../TEST REPO", "a") {//TEST1/b.txt .a.kate-swp
+    //     Ok(diff) => println!("{}", diff),
+    //     Err(e) => eprintln!("Error generating diff: {}", e),
+    // }
     // let args: Vec<String> = env::args().collect();
     // let path = &args[1];
     // let path = "../../TEST REPO";
