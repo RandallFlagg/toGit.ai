@@ -36,23 +36,12 @@ const showDiff = () => {
 };
 
 // Watch for changes to diffString and call showDiff when it changes
-watch(() => props.diffString, () => {
-    if (props.diffString) {
+watch(() => props.diffString, (newVal) => {
+  if (newVal) {
         showDiff();
     }
 }, { immediate: true });
 </script>
 
-<script>
-// Export the component
-export default {
-    name: 'DiffViewer',
-    props: {
-        diffString: {
-            type: String,
-        }
-    }
-};
-</script>
 
 <style scoped></style>
