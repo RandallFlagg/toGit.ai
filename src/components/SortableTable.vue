@@ -17,9 +17,9 @@
             <th @click="() => sortTable('size')">
               Size
             </th>
-            <th @click="() => sortTable('full_file_path')">
+            <!-- <th @click="() => sortTable('full_file_path')">
               Full File Path
-            </th>
+            </th> -->
             <th @click="() => sortTable('relative_file_path')">
               Relative File Path
             </th>
@@ -44,7 +44,7 @@
             <td>{{ item.file_type }}</td>
             <td>{{ item.file_status }}</td>
             <td>{{ item.size }}</td>
-            <td>{{ item.full_file_path }}</td>
+            <!-- <td>{{ item.full_file_path }}</td> -->
             <td>{{ item.relative_file_path }}</td>
             <td>{{ item.file_extension }}</td>
           </tr>

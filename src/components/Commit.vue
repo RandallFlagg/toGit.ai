@@ -81,6 +81,7 @@ onMounted(() => {
   fetchData();
 });
 </script>
+
 <template>
   <div class="container">
     <router-link to="/" class="back-link">
@@ -89,10 +90,10 @@ onMounted(() => {
     <h1>Git Commit Command Generator</h1>
     <form class="main-form" @submit.prevent="generateCommand">
       <!-- Commit Message -->
-      <label title="-m, --message <message>">
+      <label title="-m, --message <message>" class="commit-message-container">
         Commit Message <!-- <span class="required">*</span> -->
         <span class="help" title="Use the given <message> as the commit message.">?</span>
-        <textarea v-model="form.message" class="commit-message" name="message" placeholder="<message>" required />
+        <textarea v-model="form.message" class="commit-message commit-message-box" name="message" placeholder="<message>" required />
       </label>
       <details>
         <summary>Additional Options</summary>
@@ -276,3 +277,21 @@ onMounted(() => {
     <pre id="command-output">{{ commandOutput }}</pre>
   </div>
 </template>
+
+<style scoped>
+.commit-message-container {
+  display: block;
+  width: 100%;
+  margin-bottom: 8px;
+  font-weight: bold;
+}
+
+.commit-message-box {
+  width: 100%;
+  height: 75px; /* Adjust height as needed */
+  resize: vertical; /* Allows vertical resizing */
+  padding: 10px;
+  box-sizing: border-box; /* Ensures padding is included in the width */
+  margin-top: 8px; /* Adds space between label text and textarea */
+}
+</style>
