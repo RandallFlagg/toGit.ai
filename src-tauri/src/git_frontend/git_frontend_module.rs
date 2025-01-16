@@ -1,12 +1,14 @@
 use chrono::{DateTime, Utc};
 use file_format::FileFormat;
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-use git2::{Repository, DiffOptions, Error, DiffFormat, DiffLineType, BranchType, Oid, Status};
+use git2::{BranchType, DiffFormat, DiffLineType, DiffOptions, Error, Object, Oid, Repository, Status};
+use tauri::path;
 // use libgit2_sys::{git_repository, git_repository};
 use crate::components::file_metadata::FileMetadata;
 use crate::components::git_frontend_error::GitFrontendError;
 use binaryornot::is_binary;
 use infer;
+use lazy_static::lazy_static;
 use log::debug;
 use mime_guess::from_path;
 use serde::Serialize;
@@ -14,12 +16,13 @@ use shellexpand;
 use std::collections::{HashMap, HashSet};
 use std::fs::{self, metadata, File};
 use std::io::Read;
-use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::time::SystemTime;
-use std::{io, path};
 use std::sync::Mutex;
-use lazy_static::lazy_static;
+use std::time::SystemTime;
+use std::{
+    io,
+    path::{Path, PathBuf},
+};
 
 // #[macro_use]
 // extern crate lazy_static;
@@ -28,16 +31,66 @@ lazy_static! {
     static ref FILE_FORMAT_CACHE: Mutex<HashMap<PathBuf, String>> = Mutex::new(HashMap::new());
 }
 
-
+/// Retrieves the content of a file in the specified repository and relative path.
+/// 
+/// # Arguments
+/// 
+/// * `repo_path` - A reference to a `Path` that holds the path to the Git repository.
+/// * `relative_file_path` - A reference to a `Path` that holds the relative path to the file within the repository. The file path should not be prefixed with a '/'.
+/// 
+/// # Returns
+///
+/// * `Result<String, GitFrontendError>` - The content of the file as a `String` on success, or a `GitFrontendError` on failure.
+///
+/// # Example
+///
+/// ```rust
+/// fn example() -> Result<(), GitFrontendError> {
+///     let repo_path = PathBuf::from("../../TEST REPO");
+///     let relative_file_path = PathBuf::from("TEST1/b.txt");
+///     let content = get_file_content(repo_path, relative_file_path)?;
+///     println!("{}", content);
+///
+///     let repo_path = PathBuf::from("../../TEST REPO");
+///     let relative_file_path = PathBuf::from("a");
+///     let content = get_file_content(repo_path, relative_file_path)?;
+///     println!("{}", content);
+///
+///     Ok(())
+/// }
+/// ```
 #[tauri::command]
-pub fn get_file_content(full_file_path: PathBuf) -> Result<String, GitFrontendError> {
-    let mut contents=String::new();
-    if is_binary(&full_file_path).expect("unable to read file") {
+pub fn get_file_content(repo_path: PathBuf, relative_file_path: PathBuf) -> Result<String, GitFrontendError> {
+    println!("Relative Repo Path: {}", repo_path.to_string_lossy());
+    let absolute_repo_path = fs::canonicalize(&repo_path).map_err(|e| GitFrontendError::Other(e.to_string()))?; //TODO: Do we need todo this?
+    println!("Absolute Repo Path: {}", absolute_repo_path.to_string_lossy());
+    println!("Relative File Path: {}", relative_file_path.to_string_lossy());
+    let full_file_path = absolute_repo_path.join(&relative_file_path.strip_prefix("/").unwrap_or(&relative_file_path));
+    println!("Full File Path: {}", full_file_path.to_string_lossy());
+    let contents;
+    if is_binary(full_file_path).expect("unable to read file") {
         contents = "Binary file".to_string();
     } else {
         // let mut file = fs::File::open(&full_file_path).map_err(|e| e.to_string())?;
         // file.read_to_string(&mut contents).map_err(|e| e.to_string())?;
-        generate_diff(repo_path, full_file_path)?;
+
+        // Resolve the full path from the relative path
+        // let absolute_file_path = fs::canonicalize(&full_file_path).map_err(|e| GitFrontendError::Other(e.to_string()))?; //TODO: Do we need todo this?
+        // println!("Absolute File Path: {}", absolute_file_path.to_string_lossy());
+        // let relative_file_path;
+        // match absolute_file_path.strip_prefix(&absolute_repo_path) {
+        //     Ok(prefix) => {
+        //         relative_file_path = prefix;
+        //         println!("Prefix: {}", prefix.to_string_lossy())
+        //     }
+        //     Err(e) => {
+        //         eprintln!("Error getting file content: {}", e);
+        //         return Err(GitFrontendError::from(e.to_string()));
+        //     }
+        // };
+        println!("Relative File Path: {}", relative_file_path.to_string_lossy());
+        contents = generate_file_diff_with_git2(absolute_repo_path, relative_file_path.to_path_buf())?;
+        println!("Content: {}", contents);
     }
 
     Ok(contents)
@@ -55,7 +108,7 @@ pub fn get_file_content(full_file_path: PathBuf) -> Result<String, GitFrontendEr
 #[tauri::command]
 pub fn get_repo_status(repo_path: &Path) -> Result<Vec<FileMetadata>, GitFrontendError> {
     if !repo_path.exists() || !repo_path.is_dir() {
-        return Err("Invalid repository path".to_string());
+        return Err(GitFrontendError::InvalidPath("Invalid repository path".to_string()));
     }
 
     // Call the internal function to get the repository status
@@ -220,7 +273,7 @@ fn system_time_to_naive_date_time(st: SystemTime) -> DateTime<Utc> {
 /// Generates a diff string between a file in the working tree and the index.
 /// If the file is not in the working tree, it returns the diff against an empty file.
 /// The file name should be relative to the repo path
-fn generate_diff(repo_path: &str, file_name: &str) -> Result<String, Error> {
+fn generate_diff(repo_path: &str, full_file_path: &PathBuf) -> Result<String, Error> {
     // Open the repository
     let repo = Repository::open(repo_path)?;
 
@@ -228,38 +281,45 @@ fn generate_diff(repo_path: &str, file_name: &str) -> Result<String, Error> {
     let index = repo.index()?;
 
     // Get the OID of the file in the index
-    let oid = index.get_path(Path::new(file_name), 0)
-        .ok_or_else(|| Error::from_str("File not found in index"))?
-        .id;
+    let oid = index.get_path(Path::new(full_file_path), 0);
+    let oid = index.get_path(full_file_path.as_path(), 0).ok_or_else(|| Error::from_str("File not found in index"))?.id;
 
     // Read the file content from the index
     let blob = repo.find_blob(oid)?;
     let index_content = String::from_utf8_lossy(blob.content());
 
     // Read the file content from the working tree
-    let working_tree_content = fs::read_to_string(Path::new(repo_path).join(file_name))
-        .unwrap_or_else(|_| String::new());
+    let working_tree_content = fs::read_to_string(Path::new(repo_path).join(full_file_path)).unwrap_or_else(|_| String::new());
 
     // Generate the diff
-    let diff =generate_diff_with_git2(repo_path, file_name)?;
+    // let diff = generate_diff_with_git2(&repo, full_file_path)?;
+    let diff = "DUMMY".to_string();
 
+    // Return the diff
     Ok(diff)
 }
 
-fn generate_diff_with_git2(repo_path: &str, file_name: &str) -> Result<String, Error> {
+fn generate_file_diff_with_git2(repo_path: PathBuf, relative_file_name: PathBuf) -> Result<String, Error> {
+    println!("Working with File: {}", relative_file_name.to_string_lossy());
+    println!("Working with Repo: {}", repo_path.to_string_lossy());
     // Open the repository
-    let repo = Repository::open(repo_path)?;
-
+    let repo = Repository::open(&repo_path)?;
+    println!("{}", repo.path().to_string_lossy());
+    println!("work tree: {}", repo.is_worktree());
     // Prepare diff options
     let mut diff_options = DiffOptions::new();
-    diff_options.pathspec(file_name);
+    // let full_file_path = repo_path.join(file_name.clone());
+    // println!("Full File Path: {}",full_file_path.to_string_lossy());
+    diff_options.pathspec(&relative_file_name); //TODO: Remove the clone
+    println!("Diff options set for file: {}", relative_file_name.to_string_lossy());
 
     // Generate the diff
     let diff = repo.diff_index_to_workdir(None, Some(&mut diff_options))?;
-
+    println!("diff stats: {:?}", diff.stats());
     // Collect the diff output
-    let mut diff_output = String::new();
+    let mut diff_output: String = String::new();
     diff.print(DiffFormat::Patch, |_, _, line| {
+        println!("{}", "c1");
         let prefix = match line.origin() {
             '+' => '+',
             '-' => '-',
@@ -272,12 +332,14 @@ fn generate_diff_with_git2(repo_path: &str, file_name: &str) -> Result<String, E
             '`' => '`',
             'R' => 'R',
             // ' ' => ' ',
-             // Add more cases as needed
+            // Add more cases as needed
             _ => ' ',
         };
         diff_output.push_str(&format!("{}{}", prefix, std::str::from_utf8(line.content()).unwrap()));
+        println!("Line processed: {}", std::str::from_utf8(line.content()).unwrap());
         true
     })?;
-
+    println!("{}", "D");
+    println!("DIFF: {}", diff_output);
     Ok(diff_output)
 }

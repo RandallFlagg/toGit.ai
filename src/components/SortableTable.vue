@@ -5,25 +5,25 @@
         <thead>
           <tr>
             <th><input type="checkbox"></th>
-            <th @click="sortTable('fileName')">
+            <th @click="() => sortTable('fileName')">
               File Name
             </th>
-            <th @click="sortTable('fileType')">
+            <th @click="() => sortTable('fileType')">
               File Type
             </th>
-            <th @click="sortTable('status')">
+            <th @click="() => sortTable('status')">
               Status
             </th>
-            <th @click="sortTable('size')">
+            <th @click="() => sortTable('size')">
               Size
             </th>
-            <th @click="sortTable('full_file_path')">
+            <th @click="() => sortTable('full_file_path')">
               Full File Path
             </th>
-            <th @click="sortTable('relative_file_path')">
+            <th @click="() => sortTable('relative_file_path')">
               Relative File Path
             </th>
-            <th @click="sortTable('fileExtension')">
+            <th @click="() => sortTable('fileExtension')">
               File Extension
             </th>
           </tr>
@@ -32,7 +32,7 @@
           <tr
             v-for="item in sortedItems"
             :key="item.id"
-            @click="selectItem(item)"
+            @click="() => selectItem(item)"
           >
             <td>
               <input
@@ -54,7 +54,8 @@
     <div class="preview-pane">
       <div v-if="selectedItem">
         <h3>Preview: {{ selectedItem.file_name }}</h3>
-        <p>{{ previewText }}</p>
+        <p>{{ previewText }}</p><!--TODO: Do we still need this? remove-->
+        <DiffViewer :diffString="diffString" />
       </div>
       <div v-else>
         <h3>Select an item to preview</h3>
@@ -63,50 +64,51 @@
   </div>
 </template>
 
-<script>
-export default {
-  name: 'SortableTable',
-  props: {
-    items: {
-      type: Array,
-      required: true
-    }
-  },
-  data() {
-    return {
-      sortColumn: '',
-      sortOrder: 'asc',
-      selectedItem: null,
-      previewText: ''
-    };
-  },
-  computed: {
-    sortedItems() {
-      return [...this.items].sort((a, b) => {
-        if (a[this.sortColumn] > b[this.sortColumn]) return this.sortOrder === 'asc' ? 1 : -1;
-        if (a[this.sortColumn] < b[this.sortColumn]) return this.sortOrder === 'asc' ? -1 : 1;
-        return 0;
-      });
-    }
-  },
-  methods: {
-    sortTable(column) {
-      if (this.sortColumn === column) {
-        this.sortOrder = this.sortOrder === 'asc' ? 'desc' : 'asc';
-      } else {
-        this.sortColumn = column;
-        this.sortOrder = 'asc';
-      }
-    },
-    selectItem(item) {
-      this.selectedItem = item;
-      this.getFileContent(item.full_file_path);
-    },
-    async getFileContent(fullFilePath) {
-      const fileContent = await window.__TAURI__.core.invoke('get_file_content', { fullFilePath: fullFilePath });
-      this.previewText = fileContent;
-    }
+<script setup>
+import { ref, computed } from 'vue';
+import DiffViewer from './DiffViewer.vue';
+
+const props = defineProps({
+  items: {
+    type: Array,
+    required: true
   }
+});
+
+const sortColumn = ref('');
+const sortOrder = ref('asc');
+const selectedItem = ref(null);
+const previewText = ref('');
+const diffString = ref('');
+
+const sortedItems = computed(() => {
+  return [...props.items].sort((a, b) => {
+    if (a[sortColumn.value] > b[sortColumn.value]) return sortOrder.value === 'asc' ? 1 : -1;
+    if (a[sortColumn.value] < b[sortColumn.value]) return sortOrder.value === 'asc' ? -1 : 1;
+    return 0;
+  });
+});
+
+const sortTable = (column) => {
+  if (sortColumn.value === column) {
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
+  } else {
+    sortColumn.value = column;
+    sortOrder.value = 'asc';
+  }
+};
+
+const selectItem = (item) => {
+  selectedItem.value = item;
+  getFileContent(item.relative_file_path);
+};
+
+const getFileContent = async (filePath) => {
+  // pub fn get_file_content(repo_path: &str, full_file_path: PathBuf) -> Result<String, GitFrontendError> {
+  const fileContent = await window.__TAURI__.core.invoke('get_file_content', { repoPath: "../../TEST REPO", relativeFilePath: filePath });//TODO: Cahnge to get a diff instead of content
+  // previewText.value = fileContent;
+  // debugger;
+  diffString.value = fileContent.trim(); // TODO: Remove the trim and fix before being sent
 };
 </script>
 

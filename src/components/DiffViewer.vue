@@ -6,7 +6,7 @@
 // Import necessary modules
 // import '../assets/diff2html.min.css';
 // import * as Diff2Html from '../assets/diff2html.min.js';
-import { ref, watch, defineProps } from 'vue';
+import { ref, watch } from 'vue';
 import 'diff2html/bundles/css/diff2html.min.css';
 import * as Diff2Html from 'diff2html'; //TODO: Find a way to use local resources without NPM if possible?
 
@@ -31,14 +31,18 @@ const showDiff = () => {
         highlight: true,
         renderNothingWhenEmpty: false,
     };
-
+// debugger;
     renderedDiff.value = props.diffString ? Diff2Html.html(props.diffString, configuration) : '';
 };
 
 // Watch for changes to diffString and call showDiff when it changes
 watch(() => props.diffString, (newVal) => {
+    // debugger
   if (newVal) {
         showDiff();
+    }
+    else{
+        renderedDiff.value = "No Changes";//TODO: Need to handle a situation when a file is already staged
     }
 }, { immediate: true });
 </script>

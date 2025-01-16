@@ -1,3 +1,14 @@
+<template>
+  START
+  <main id="TEST">
+    <button @click="sendDataToDiffViewer">Send Data to Diff Viewer</button>
+    <DiffViewer :diffString="diffString" />
+    <!-- <DiffViewer /> -->
+    <!-- <SortableTable :items="tableData" /> -->
+  </main>
+  END
+</template>
+
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import SortableTable from './SortableTable.vue';
@@ -58,14 +69,3 @@ onMounted(() => {
   fetchData();
 });
 </script>
-
-<template>
-  START
-  <main id="TEST">
-    <button @click="sendDataToDiffViewer">Send Data to Diff Viewer</button>
-    <DiffViewer :diffString="diffString" />
-    <!-- <DiffViewer /> -->
-    <!-- <SortableTable :items="tableData" /> -->
-  </main>
-  END
-</template>

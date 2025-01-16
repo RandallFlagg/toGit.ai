@@ -1,7 +1,7 @@
 use chrono::ParseError;
 use tauri::ipc::InvokeError;
 // use tauri::ipc::InvokeError;
-use std::{fmt, io};
+use std::{fmt, io, path::StripPrefixError};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -12,6 +12,8 @@ pub(crate) enum GitFrontendError {
     Parse(#[from] chrono::ParseError),
     #[error("Git2 error")]
     Git2(#[from] git2::Error),
+    #[error("Strip prefix error")]
+    StripPrefixError(#[from] std::path::StripPrefixError),
     #[error("Invalid repository path")]
     InvalidPath(String),
     #[error("Other error")]

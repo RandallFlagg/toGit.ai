@@ -1,13 +1,17 @@
+#![allow(unused_imports)]
+#![allow(dead_code)]
+#![allow(unused_variables)]
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use git2::Error;
 // https://confidence.sh/blog/rust-module-system-explained/
 use log::{debug, info};
 use mime_guess::from_path;
 use std::env;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::time::SystemTime;
-use tauri::State;
+use tauri::{generate_context, State};
 use tauri::{
     menu::{AboutMetadata, Menu, MenuBuilder, MenuItemBuilder, SubmenuBuilder},
     Manager,
@@ -25,20 +29,32 @@ mod git_frontend;
 mod logic;
 use crate::components::file_metadata::FileMetadata;
 use crate::components::git_frontend_error::GitFrontendError;
-use crate::git_frontend::git_frontend_module::get_repo_status;
 use crate::git_frontend::git_frontend_module::get_file_content;
+use crate::git_frontend::git_frontend_module::get_repo_status;
 use crate::logic::app_config::AppConfig;
 
-fn main() {
+fn main() -> Result<(), GitFrontendError> {
     // match generate_diff("../../TEST REPO", "a") {//TEST1/b.txt .a.kate-swp
     //     Ok(diff) => println!("{}", diff),
     //     Err(e) => eprintln!("Error generating diff: {}", e),
     // }
+
+    // let repo_path = PathBuf::from("../../TEST REPO");
+    // let relative_file_path = PathBuf::from("/TEST1/b.txt");
+    // // let full_file_path = PathBuf::from("TEST1/b.txt");
+    // let content = get_file_content(repo_path, relative_file_path)?;
+    // println!("{}", content);
+    // let repo_path = PathBuf::from("../../TEST REPO");
+    // let relative_file_path = PathBuf::from("a");
+    // let content = get_file_content(repo_path, relative_file_path)?;
+    // println!("{}", content);
+
     // let args: Vec<String> = env::args().collect();
-    // let path = &args[1];
-    // let path = "../../TEST REPO";
-    // println!("{:?}", main_filesystem(path).map_err(|e| e.to_string()));
+    // let repo_path = &args[1];
+    // println!("{:?}", main_filesystem(repo_path).map_err(|e| e.to_string()));
     main_tauri();
+    //Ok("SUCCESS".to_string())
+    Ok(())
 }
 
 fn main_filesystem(full_file_path: &str) -> Result<(), GitFrontendError> {

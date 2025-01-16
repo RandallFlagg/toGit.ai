@@ -74,44 +74,6 @@ const fetchData = async () => {
   // const repo_path = "~/Ohad/Projects/OIV/OIV/"; // TODO: Adjust as needed
   const repo_path = "../../TEST REPO"; // TODO: Adjust as needed
   const fetchedData = await window.__TAURI__.core.invoke('get_repo_status', { repoPath: repo_path }); //TODO:From where should we get the repo path?
-  // var result = [{
-  //   id: 1, file_name: ".a.kate-swp", file_extension: "kate-swp", file_type: "Arbitrary Binary Data", file_status: "Untracked", size: "2.79 KB",
-  //   full_file_path: "../../TEST REPO/.a.kate-swp", relative_file_path: ".a.kate-swp"
-  // }, {
-  //   id: 2, file_name: "b.txt", file_extension: "txt", file_type: "Arbitrary Binary Data", file_status: "Untracked", size: "0.01 KB",
-  //   full_file_path: "../../TEST REPO/TEST1/b.txt", relative_file_path: "TEST1/b.txt"
-  // }, {
-  //   id: 3, file_name: "a", file_extension: "", file_type: "Arbitrary Binary Data", file_status: "Modified", size: "0.03 KB",
-  //   full_file_path: "../../TEST REPO/a", relative_file_path: "a"
-  // }];
-  // const fetchedData2 = [
-  //   {
-  //     id: 1, fileName: 'file1.txt', fileType: 'Text', status: 'Added', size: '2 KB',
-  //     createdBy: 'User A', createdAt: '2024-01-01', modifiedBy: 'User B', modifiedAt: '2024-01-05',
-  //     comments: 'No comments', preview: 'This is the content of file1.txt', selected: false
-  //   },
-  //   {
-  //     id: 2, fileName: 'file2.txt', fileType: 'Text', status: 'Committed', size: '3 KB',
-  //     createdBy: 'User B', createdAt: '2024-01-02', modifiedBy: 'User C', modifiedAt: '2024-01-06',
-  //     comments: 'Reviewed', preview: 'This is the content of file2.txt', selected: false
-  //   },
-  //   {
-  //     id: 3, fileName: 'file3.txt', fileType: 'Text', status: 'Added', size: '4 KB',
-  //     createdBy: 'User C', createdAt: '2024-01-03', modifiedBy: 'User D', modifiedAt: '2024-01-07',
-  //     comments: 'Pending review', preview: 'This is the content of file3.txt', selected: false
-  //   },
-  //   {
-  //     id: 4, fileName: 'file4.txt', fileType: 'Text', status: 'Committed', size: '5 KB',
-  //     createdBy: 'User D', createdAt: '2024-01-04', modifiedBy: 'User E', modifiedAt: '2024-01-08',
-  //     comments: 'Approved', preview: 'This is the content of file4.txt', selected: false
-  //   },
-  //   {
-  //     id: 5, fileName: 'file5.txt', fileType: 'Text', status: 'Added', size: '6 KB',
-  //     createdBy: 'User E', createdAt: '2024-01-05', modifiedBy: 'User F', modifiedAt: '2024-01-09',
-  //     comments: 'Rejected', preview: 'This is the content of file5.txt', selected: false
-  //   }
-  //   // Other dummy data items...
-  // ];
   tableData.value = fetchedData;
 };
 
