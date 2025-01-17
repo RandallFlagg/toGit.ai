@@ -108,10 +108,10 @@ const sortTable = (column) => {
 
 const selectItem = (item) => {
   selectedItem.value = item;
-  getFileContent(item.relative_file_path);
+  getFileDiff(item.relative_file_path);
 };
 
-const getFileContent = async (filePath) => {
+const getFileDiff = async (filePath) => {
   const fileContent = await window.__TAURI__.core.invoke('get_file_content', { repoPath: "../../TEST REPO", relativeFilePath: filePath });//TODO: Cahnge to get a diff instead of content
   // previewText.value = fileContent;
   diffString.value = fileContent.trim(); // TODO: Remove the trim and fix before being sent
