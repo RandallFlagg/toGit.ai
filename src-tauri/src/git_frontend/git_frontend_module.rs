@@ -32,12 +32,12 @@ lazy_static! {
 }
 
 /// Retrieves the content of a file in the specified repository and relative path.
-/// 
+///
 /// # Arguments
-/// 
+///
 /// * `repo_path` - A reference to a `Path` that holds the path to the Git repository.
 /// * `relative_file_path` - A reference to a `Path` that holds the relative path to the file within the repository. The file path should not be prefixed with a '/'.
-/// 
+///
 /// # Returns
 ///
 /// * `Result<String, GitFrontendError>` - The content of the file as a `String` on success, or a `GitFrontendError` on failure.
@@ -132,14 +132,19 @@ fn get_repo_status_internal(repo_path: &Path) -> Result<Vec<FileMetadata>, GitFr
         let status = entry.status();
         // Determine the type of change
         let change_type = match status {
-            _ if status.contains(Status::INDEX_NEW) || status.contains(Status::WT_NEW) => "Untracked",
-            _ if status.contains(Status::INDEX_DELETED) || status.contains(Status::WT_DELETED) => "Deleted",
-            _ if status.contains(Status::INDEX_MODIFIED) || status.contains(Status::WT_MODIFIED) => "Modified",
-            _ if status.contains(Status::INDEX_RENAMED) || status.contains(Status::WT_RENAMED) => "Renamed",
-            _ if status.contains(Status::INDEX_TYPECHANGE) || status.contains(Status::WT_TYPECHANGE) => "Type Changed",
-            _ if status.contains(Status::IGNORED) => "Ignored",
-            _ if status.contains(Status::CONFLICTED) => "Conflicted",
-            _ => continue, //"Unknown"
+            _ if status.contains(Status::INDEX_NEW) => "INDEX_NEW",
+            _ if status.contains(Status::WT_NEW) => "WT_NEW",
+            _ if status.contains(Status::INDEX_DELETED) => "INDEX_DELETED",
+            _ if status.contains(Status::WT_DELETED) => "WT_DELETED",
+            _ if status.contains(Status::INDEX_MODIFIED) => "INDEX_MODIFIED",
+            _ if status.contains(Status::WT_MODIFIED) => "WT_MODIFIED",
+            _ if status.contains(Status::INDEX_RENAMED) => "INDEX_RENAMED",
+            _ if status.contains(Status::WT_RENAMED) => "WT_RENAMED",
+            _ if status.contains(Status::INDEX_TYPECHANGE) => "INDEX_TYPECHANGE",
+            _ if status.contains(Status::WT_TYPECHANGE) => "WT_TYPECHANGE",
+            _ if status.contains(Status::IGNORED) => "IgnIGNORED",
+            _ if status.contains(Status::CONFLICTED) => "CONFLICTED",
+            _ => continue, //"Unknown" //TODO: This should be changed to an error?
         };
         let file = get_file_metadata(&full_file_path, change_type, repo_path)?;
         changes.push(file);

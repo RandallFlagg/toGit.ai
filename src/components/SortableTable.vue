@@ -29,20 +29,13 @@
           </tr>
         </thead>
         <tbody>
-          <tr
-            v-for="item in sortedItems"
-            :key="item.id"
-            @click="() => selectItem(item)"
-          >
+          <tr v-for="item in sortedItems" :key="item.id" @click="() => selectItem(item)">
             <td>
-              <input
-                v-model="item.selected"
-                type="checkbox"
-              >
+              <input v-model="item.selected" type="checkbox" :checked="isChecked(item.file_status)">
             </td>
             <td>{{ item.file_name }}</td>
             <td>{{ item.file_type }}</td>
-            <td>{{ item.file_status }}</td>
+            <td>{{ statuses[item.file_status] }}</td>
             <td>{{ item.size }}</td>
             <!-- <td>{{ item.full_file_path }}</td> -->
             <td>{{ item.relative_file_path }}</td>
@@ -67,6 +60,21 @@
 <script setup>
 import { ref, computed } from 'vue';
 import DiffViewer from './DiffViewer.vue';
+
+const statuses = {
+  "INDEX_NEW": "New",
+  "WT_NEW": "Untracked",
+  "INDEX_DELETED": "Deleted",
+  "WT_DELETED": "Missing",
+  "INDEX_MODIFIED": "Staged",
+  "WT_MODIFIED": "Modified",
+  "INDEX_RENAMED": "Renamed(Staged)",
+  "WT_RENAMED": "Renamed",
+  "INDEX_TYPECHANGE": "Type Changed(Staged)",
+  "WT_TYPECHANGE": "Type Changed",
+  "IGNORED": "Ignored",
+  "CONFLICTED": "Conflicted",
+};
 
 const props = defineProps({
   items: {
@@ -104,11 +112,13 @@ const selectItem = (item) => {
 };
 
 const getFileContent = async (filePath) => {
-  // pub fn get_file_content(repo_path: &str, full_file_path: PathBuf) -> Result<String, GitFrontendError> {
   const fileContent = await window.__TAURI__.core.invoke('get_file_content', { repoPath: "../../TEST REPO", relativeFilePath: filePath });//TODO: Cahnge to get a diff instead of content
   // previewText.value = fileContent;
-  // debugger;
   diffString.value = fileContent.trim(); // TODO: Remove the trim and fix before being sent
+};
+
+const isChecked = (status) => {
+  return status.startsWith("INDEX_");
 };
 </script>
 
@@ -116,10 +126,12 @@ const getFileContent = async (filePath) => {
 .split-pane {
   display: flex;
 }
+
 .table-pane {
   width: 50%;
   overflow-x: auto;
 }
+
 .preview-pane {
   flex-grow: 1;
   padding: 10px;
