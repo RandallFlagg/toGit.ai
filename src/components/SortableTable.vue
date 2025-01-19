@@ -31,7 +31,7 @@
         <tbody>
           <tr v-for="item in sortedItems" :key="item.id" @click="() => selectItem(item)">
             <td>
-              <input v-model="item.selected" type="checkbox" :checked="isChecked(item.file_status)">
+              <input v-model="item.selected" type="checkbox" :checked="isChecked(item.file_status)" @click.stop="changeStatus(item)">
             </td>
             <td>{{ item.file_name }}</td>
             <td>{{ item.file_type }}</td>
@@ -112,10 +112,15 @@ const selectItem = (item) => {
 };
 
 const getFileDiff = async (filePath) => {
-  const fileContent = await window.__TAURI__.core.invoke('get_file_content', { repoPath: "../../TEST REPO", relativeFilePath: filePath });//TODO: Cahnge to get a diff instead of content
+  const fileContent = await window.__TAURI__.core.invoke('get_file_content', { repoPath: "../../TEST REPO", relativeFilePath: filePath });
   // previewText.value = fileContent;
   diffString.value = fileContent.trim(); // TODO: Remove the trim and fix before being sent
 };
+
+const changeStatus = async (item) => {
+  console.log(item);
+  const status = await window.__TAURI__.core.invoke('change_file_status', { repoPath: "../../TEST REPO", relativeFilePath: filePath });
+}
 
 const isChecked = (status) => {
   return status.startsWith("INDEX_");

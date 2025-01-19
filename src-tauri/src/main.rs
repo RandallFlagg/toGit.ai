@@ -31,6 +31,7 @@ use crate::components::file_metadata::FileMetadata;
 use crate::components::git_frontend_error::GitFrontendError;
 use crate::git_frontend::git_frontend_module::get_file_content;
 use crate::git_frontend::git_frontend_module::get_repo_status;
+use crate::git_frontend::git_frontend_module::change_file_status;
 use crate::logic::app_config::AppConfig;
 
 fn main() -> Result<(), GitFrontendError> {
@@ -38,7 +39,7 @@ fn main() -> Result<(), GitFrontendError> {
     //     Ok(diff) => println!("{}", diff),
     //     Err(e) => eprintln!("Error generating diff: {}", e),
     // }
-
+    println!("{:?}",main_change_file_status());
     // let repo_path = PathBuf::from("../../TEST REPO");
     // let relative_file_path = PathBuf::from("/TEST1/b.txt");
     // // let full_file_path = PathBuf::from("TEST1/b.txt");
@@ -52,8 +53,43 @@ fn main() -> Result<(), GitFrontendError> {
     // let args: Vec<String> = env::args().collect();
     // let repo_path = &args[1];
     // println!("{:?}", main_filesystem(repo_path).map_err(|e| e.to_string()));
-    main_tauri();
+    // main_tauri();
     //Ok("SUCCESS".to_string())
+    Ok(())
+}
+
+//TODO: Write a whole scenario to be able to test all the changes. Write it in TDD.
+fn main_change_file_status() -> Result<(), GitFrontendError> {
+    let repo_path = Path::new("../../TEST REPO");//.exists();
+    match get_repo_status(&repo_path) {
+        Ok(it) => println!("{:?}",it),
+        Err(err) => return Err(err),
+    };
+
+    let file_path = Path::new("a");
+    let command = "Add"; // Change this to "Remove", "Commit", "Delete", "Rename", etc.
+    let new_file_path = Some("path/to/your/new_file"); // Required for renaming
+
+    if let Err(e) = change_file_status(repo_path, file_path, command, new_file_path) {
+        eprintln!("Error: {}", e);
+    }
+    match get_repo_status(&repo_path) {
+        Ok(it) => println!("{:?}",it),
+        Err(err) => return Err(err),
+    };
+
+    let file_path = Path::new("a");
+    let command = "Remove"; // Change this to "Remove", "Commit", "Delete", "Rename", etc.
+    let new_file_path = Some("path/to/your/new_file"); // Required for renaming
+
+    if let Err(e) = change_file_status(repo_path, file_path, command, new_file_path) {
+        eprintln!("Error: {}", e);
+    }
+
+    match get_repo_status(&repo_path) {
+        Ok(it) => println!("{:?}",it),
+        Err(err) => return Err(err),
+    };
     Ok(())
 }
 

@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use file_format::FileFormat;
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-use git2::{BranchType, DiffFormat, DiffLineType, DiffOptions, Error, Object, Oid, Repository, Status};
+use git2::{BranchType, DiffFormat, DiffLineType, DiffOptions, Error, IndexAddOption, Object, Oid, Repository, Status, StatusOptions};
 use tauri::path;
 // use libgit2_sys::{git_repository, git_repository};
 use crate::components::file_metadata::FileMetadata;
@@ -29,6 +29,83 @@ use std::{
 
 lazy_static! {
     static ref FILE_FORMAT_CACHE: Mutex<HashMap<PathBuf, String>> = Mutex::new(HashMap::new());
+}
+
+#[tauri::command]
+pub fn commit(repo_path: &str) -> Result<String, GitFrontendError> {
+    let repo = Repository::open(repo_path)?;
+    let mut index = repo.index()?;
+    // Commit the changes
+    let oid = index.write_tree()?;
+    let signature = repo.signature()?;
+    let parent_commit = repo.head()?.peel_to_commit()?;
+    let tree = repo.find_tree(oid)?;
+    repo.commit(Some("HEAD"), &signature, &signature, "Commit message", &tree, &[&parent_commit])?;
+    println!("Changes committed.");
+
+    Ok("Commit Success".to_string())
+}
+
+#[tauri::command]
+pub fn change_file_status(repo_path: &Path, file_path: &Path, command: &str, new_file_path: Option<&str>) -> Result<(), GitFrontendError> {
+    println!("AAA1");
+    let repo = Repository::open(repo_path)?;
+    println!("AAA2");
+    let mut index = repo.index()?;
+
+    match command {
+        "Add" => {
+            println!("Add");
+            // Add file to the index (staging area)
+            index.add_path(Path::new(file_path))?;
+            index.write()?;
+            println!("File added to the index.");
+        }
+        "Remove" => {
+            // Remove file from the index
+            index.remove_path(Path::new(file_path))?;
+            index.write()?;
+            println!("File removed from the index.");
+        }
+        "Delete" => {
+            // Delete file from the working directory and index
+            fs::remove_file(file_path)?;
+            index.remove_path(Path::new(file_path))?;
+            index.write()?;
+            println!("File deleted from the working directory and index.");
+        }
+        "Rename" => {
+            if let Some(new_path) = new_file_path {
+                // Rename file in the working directory and update the index
+                fs::rename(file_path, new_path)?;
+                index.remove_path(Path::new(file_path))?;
+                index.add_path(Path::new(new_path))?;
+                index.write()?;
+                println!("File renamed and index updated.");
+            } else {
+                println!("New file path required for renaming.");
+            }
+        }
+        "Modify" => {
+            // Simulate file modification
+            // let mut file = fs::OpenOptions::new().write(true).open(file_path)?;
+            // writeln!(file, "\n// Modification made to the file")?;
+            index.add_path(Path::new(file_path))?;
+            index.write()?;
+            println!("File modified and changes staged.");
+        }
+        "Untrack" => {
+            // Ensure the file is removed from the index
+            index.remove_path(Path::new(file_path))?;
+            index.write()?;
+            println!("File is now untracked.");
+        }
+        _ => {
+            println!("Unknown command."); //TODO: throw an error here
+        }
+    }
+
+    Ok(()) //TODO: Change return type
 }
 
 /// Retrieves the content of a file in the specified repository and relative path.
@@ -129,6 +206,10 @@ fn get_repo_status_internal(repo_path: &Path) -> Result<Vec<FileMetadata>, GitFr
     for entry in statuses.iter() {
         let mut full_file_path = PathBuf::from(repo_path);
         full_file_path.push(entry.path().ok_or(git2::Error::from_str("Invalid UTF-8 path"))?);
+        if full_file_path.is_dir(){
+            //TODO: What should happen in case of a dir?
+            continue;
+        }
         let status = entry.status();
         // Determine the type of change
         let change_type = match status {
@@ -177,7 +258,7 @@ fn get_file_metadata(full_file_path: &PathBuf, status: &str, repo_root: &Path) -
         .to_str()
         .expect("Invalid UTF-8 in file name")
         .to_string();
-    let file = fs::File::open(full_file_path)?;
+        let file = fs::File::open(full_file_path)?;
     let file_format = determine_file_format2(full_file_path)?; //TODO: Cache the result of this call
     let metadata = metadata(full_file_path)?;
     let modified_time = metadata.modified().unwrap_or(SystemTime::now());

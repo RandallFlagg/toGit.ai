@@ -31,17 +31,20 @@ const showDiff = () => {
         highlight: true,
         renderNothingWhenEmpty: false,
     };
-// debugger;
+    // debugger;
     renderedDiff.value = props.diffString ? Diff2Html.html(props.diffString, configuration) : '';
 };
 
 // Watch for changes to diffString and call showDiff when it changes
 watch(() => props.diffString, (newVal) => {
     // debugger
-  if (newVal) {
+    if (newVal === "Binary file") {
+        renderedDiff.value = newVal;
+    }
+    else if (newVal) {
         showDiff();
     }
-    else{
+    else {
         renderedDiff.value = "No Changes";//TODO: Need to handle a situation when a file is already staged
     }
 }, { immediate: true });
