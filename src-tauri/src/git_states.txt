@@ -1,0 +1,51 @@
+                    +--------------+
+                    | Untracked    |
+                    +--------------+
+                            |
+                            v
+                    +--------------+
+                    | Tracked      |
+                    +--------------+
+                            |
+                +-----------+------------+
+                |                        |
+        +--------------+         +--------------+
+        | Modified     |         | Unmodified   |
+        +--------------+         +--------------+
+                |
+                v
+        +--------------+
+        | Staged       |
+        +--------------+
+                |
+                v
+        +--------------+
+        | Committed    |
+        +--------------+
+
+
+Here are all the states a file can have:
+
+Untracked: The file exists in your working directory but is not being tracked by Git.
+
+Tracked: The file is being tracked by Git and can be:
+
+Unmodified: No changes since the last commit.
+
+Modified: Changes have been made but not staged.
+
+Staged: Changes have been added to the staging area.
+
+Committed: Changes have been saved in the repository history.
+
+Ignored: The file is explicitly ignored via .gitignore.
+
+Unmerged: The file has conflicts during a merge.
+
+Deleted: The file has been removed from the working directory and staged for deletion.
+
+Renamed/Moved: The file has been renamed or moved to a different location.
+
+Copied: The file has been copied to a new location (detected by Git if content is similar).
+
+Type Change: The file type has changed (e.g., from a regular file to a symbolic link).

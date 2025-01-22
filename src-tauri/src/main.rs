@@ -39,7 +39,9 @@ fn main() -> Result<(), GitFrontendError> {
     //     Ok(diff) => println!("{}", diff),
     //     Err(e) => eprintln!("Error generating diff: {}", e),
     // }
-    println!("{:?}",main_change_file_status());
+
+    // println!("{:?}",main_change_file_status());
+
     // let repo_path = PathBuf::from("../../TEST REPO");
     // let relative_file_path = PathBuf::from("/TEST1/b.txt");
     // // let full_file_path = PathBuf::from("TEST1/b.txt");
@@ -53,7 +55,7 @@ fn main() -> Result<(), GitFrontendError> {
     // let args: Vec<String> = env::args().collect();
     // let repo_path = &args[1];
     // println!("{:?}", main_filesystem(repo_path).map_err(|e| e.to_string()));
-    // main_tauri();
+    main_tauri();
     //Ok("SUCCESS".to_string())
     Ok(())
 }
@@ -66,31 +68,54 @@ fn main_change_file_status() -> Result<(), GitFrontendError> {
         Err(err) => return Err(err),
     };
 
-    let file_path = Path::new("a");
-    let command = "Add"; // Change this to "Remove", "Commit", "Delete", "Rename", etc.
-    let new_file_path = Some("path/to/your/new_file"); // Required for renaming
-
-    if let Err(e) = change_file_status(repo_path, file_path, command, new_file_path) {
-        eprintln!("Error: {}", e);
-    }
-    match get_repo_status(&repo_path) {
-        Ok(it) => println!("{:?}",it),
-        Err(err) => return Err(err),
-    };
-
-    let file_path = Path::new("a");
-    let command = "Remove"; // Change this to "Remove", "Commit", "Delete", "Rename", etc.
-    let new_file_path = Some("path/to/your/new_file"); // Required for renaming
-
-    if let Err(e) = change_file_status(repo_path, file_path, command, new_file_path) {
-        eprintln!("Error: {}", e);
+    // let file_path = Path::new("a");
+    // if let Some(value) = git_add(repo_path, file_path) {
+    //         return value;
+    //     }
+    
+        let file_path = Path::new("a");
+    if let Some(value) = git_remove(repo_path, file_path) {
+        return value;
     }
 
-    match get_repo_status(&repo_path) {
-        Ok(it) => println!("{:?}",it),
-        Err(err) => return Err(err),
-    };
+    //    let file_path = Path::new("a");
+    // if let Some(value) = git_add(repo_path, file_path) {
+    //         return value;
+    //     }
     Ok(())
+}
+
+fn git_remove(repo_path: &Path, file_path: &Path) -> Option<Result<(), GitFrontendError>> {
+    let command = "Remove";
+    let new_file_path = Some(Path::new("path/to/your/new_file"));
+    if let Err(e) = change_file_status(repo_path, file_path, command, new_file_path) {
+        eprintln!("Error: {}", e);
+    }
+    match get_repo_status(&repo_path) {
+        Ok(it) => println!("{:?}",it),
+        Err(err) => return Some(Err(err)),
+    };
+    // Change this to "Remove", "Commit", "Delete", "Rename", etc.
+    // Required for renaming
+
+
+    None
+}
+
+fn git_add(repo_path: &Path, file_path: &Path) -> Option<Result<(), GitFrontendError>> {
+    let command = "Add";
+    let new_file_path = Some(Path::new("path/to/your/new_file"));
+    if let Err(e) = change_file_status(repo_path, file_path, command, new_file_path) {
+        eprintln!("Error: {}", e);
+    }
+    match get_repo_status(&repo_path) {
+        Ok(it) => println!("{:?}",it),
+        Err(err) => return Some(Err(err)),
+    };
+    // Change this to "Remove", "Commit", "Delete", "Rename", etc.
+    // Required for renaming
+
+    None
 }
 
 fn main_filesystem(full_file_path: &str) -> Result<(), GitFrontendError> {
@@ -184,7 +209,7 @@ fn main_tauri() {
             Ok(())
         })
         .manage(AppConfig::default())
-        .invoke_handler(tauri::generate_handler![get_repo_status, get_file_content /*get_git_data, show_menu*/]) //TODO: Open
+        .invoke_handler(tauri::generate_handler![get_repo_status, get_file_content, change_file_status /*get_git_data, show_menu*/]) //TODO: Open
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

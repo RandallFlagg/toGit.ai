@@ -16,6 +16,7 @@ use shellexpand;
 use std::collections::{HashMap, HashSet};
 use std::fs::{self, metadata, File};
 use std::io::Read;
+use std::ops::ControlFlow;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 use std::time::SystemTime;
@@ -47,7 +48,7 @@ pub fn commit(repo_path: &str) -> Result<String, GitFrontendError> {
 }
 
 #[tauri::command]
-pub fn change_file_status(repo_path: &Path, file_path: &Path, command: &str, new_file_path: Option<&str>) -> Result<(), GitFrontendError> {
+pub fn change_file_status(repo_path: &Path, relative_file_path: &Path, command: &str, new_file_path: Option<&Path>) -> Result<(), GitFrontendError> {
     println!("AAA1");
     let repo = Repository::open(repo_path)?;
     println!("AAA2");
@@ -57,29 +58,29 @@ pub fn change_file_status(repo_path: &Path, file_path: &Path, command: &str, new
         "Add" => {
             println!("Add");
             // Add file to the index (staging area)
-            index.add_path(Path::new(file_path))?;
+            index.add_path(relative_file_path)?;
             index.write()?;
             println!("File added to the index.");
         }
         "Remove" => {
             // Remove file from the index
-            index.remove_path(Path::new(file_path))?;
+            index.remove_path(relative_file_path)?;//TODO: Change on a conflicted file
             index.write()?;
             println!("File removed from the index.");
         }
         "Delete" => {
             // Delete file from the working directory and index
-            fs::remove_file(file_path)?;
-            index.remove_path(Path::new(file_path))?;
+            fs::remove_file(relative_file_path)?;
+            index.remove_path(relative_file_path)?;
             index.write()?;
             println!("File deleted from the working directory and index.");
         }
         "Rename" => {
             if let Some(new_path) = new_file_path {
                 // Rename file in the working directory and update the index
-                fs::rename(file_path, new_path)?;
-                index.remove_path(Path::new(file_path))?;
-                index.add_path(Path::new(new_path))?;
+                fs::rename(relative_file_path, new_path)?;
+                index.remove_path(relative_file_path)?;
+                index.add_path(new_path)?;
                 index.write()?;
                 println!("File renamed and index updated.");
             } else {
@@ -90,13 +91,13 @@ pub fn change_file_status(repo_path: &Path, file_path: &Path, command: &str, new
             // Simulate file modification
             // let mut file = fs::OpenOptions::new().write(true).open(file_path)?;
             // writeln!(file, "\n// Modification made to the file")?;
-            index.add_path(Path::new(file_path))?;
+            index.add_path(relative_file_path)?;
             index.write()?;
             println!("File modified and changes staged.");
         }
         "Untrack" => {
             // Ensure the file is removed from the index
-            index.remove_path(Path::new(file_path))?;
+            index.remove_path(relative_file_path)?;
             index.write()?;
             println!("File is now untracked.");
         }
@@ -212,26 +213,34 @@ fn get_repo_status_internal(repo_path: &Path) -> Result<Vec<FileMetadata>, GitFr
         }
         let status = entry.status();
         // Determine the type of change
-        let change_type = match status {
-            _ if status.contains(Status::INDEX_NEW) => "INDEX_NEW",
-            _ if status.contains(Status::WT_NEW) => "WT_NEW",
-            _ if status.contains(Status::INDEX_DELETED) => "INDEX_DELETED",
-            _ if status.contains(Status::WT_DELETED) => "WT_DELETED",
-            _ if status.contains(Status::INDEX_MODIFIED) => "INDEX_MODIFIED",
-            _ if status.contains(Status::WT_MODIFIED) => "WT_MODIFIED",
-            _ if status.contains(Status::INDEX_RENAMED) => "INDEX_RENAMED",
-            _ if status.contains(Status::WT_RENAMED) => "WT_RENAMED",
-            _ if status.contains(Status::INDEX_TYPECHANGE) => "INDEX_TYPECHANGE",
-            _ if status.contains(Status::WT_TYPECHANGE) => "WT_TYPECHANGE",
-            _ if status.contains(Status::IGNORED) => "IgnIGNORED",
-            _ if status.contains(Status::CONFLICTED) => "CONFLICTED",
-            _ => continue, //"Unknown" //TODO: This should be changed to an error?
+        let change_type = match to_status_string(&status) {
+            Some(value) => value,
+            None => continue,
         };
         let file = get_file_metadata(&full_file_path, change_type, repo_path)?;
         changes.push(file);
     }
 
     Ok(changes)
+}
+
+fn to_status_string(status: &Status) -> Option<&str> {
+    let change_type = match status {
+        _ if status.contains(Status::INDEX_NEW) => "INDEX_NEW",
+        _ if status.contains(Status::WT_NEW) => "WT_NEW",
+        _ if status.contains(Status::INDEX_DELETED) => "INDEX_DELETED",
+        _ if status.contains(Status::WT_DELETED) => "WT_DELETED",
+        _ if status.contains(Status::INDEX_MODIFIED) => "INDEX_MODIFIED",
+        _ if status.contains(Status::WT_MODIFIED) => "WT_MODIFIED",
+        _ if status.contains(Status::INDEX_RENAMED) => "INDEX_RENAMED",
+        _ if status.contains(Status::WT_RENAMED) => "WT_RENAMED",
+        _ if status.contains(Status::INDEX_TYPECHANGE) => "INDEX_TYPECHANGE",
+        _ if status.contains(Status::WT_TYPECHANGE) => "WT_TYPECHANGE",
+        _ if status.contains(Status::IGNORED) => "IgnIGNORED",
+        _ if status.contains(Status::CONFLICTED) => "CONFLICTED",
+        _ => return None, //"Unknown" //TODO: This should be changed to an error?
+    };
+    Some(change_type)
 }
 
 #[tauri::command]

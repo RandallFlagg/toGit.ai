@@ -11,3 +11,5 @@ interface Tauri {
 interface Window {
     __TAURI__: Tauri;
 }
+
+declare var window: Window & typeof globalThis; //TODO: Check if this line is needed
