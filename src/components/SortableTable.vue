@@ -151,6 +151,8 @@ const allChecked = computed(() => {
 .table-pane {
   width: 50%;
   overflow-x: auto;
+  flex: 1;
+  overflow: auto;
 }
 
 .preview-pane {
@@ -181,5 +183,10 @@ th {
 
 th input {
   cursor: default;
+}
+
+input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
 }
 </style>
