@@ -45,7 +45,9 @@ watch(() => props.diffString, (newVal) => {
         showDiff();
     }
     else {
-        renderedDiff.value = "No Changes";//TODO: Need to handle a situation when a file is already staged
+        //TODO: add support for showing diff or content of file that has the same content(e.g. untracked)
+        //TODO: Need to handle a situation when a file is already staged
+        renderedDiff.value = "No Changes";
     }
 }, { immediate: true });
 </script>
