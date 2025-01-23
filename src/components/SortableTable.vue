@@ -4,7 +4,7 @@
       <table>
         <thead>
           <tr>
-            <th><input type="checkbox"></th>
+            <th><input type="checkbox" @click="toggleAllCheckboxes($event)"></th>
             <th @click="() => sortTable('fileName')">
               File Name
             </th>
@@ -125,6 +125,14 @@ const changeStatus = async (item, event) => {
 
 const isChecked = (status) => {
   return status.startsWith("INDEX_");
+};
+
+const toggleAllCheckboxes = async (event) => {
+  const isChecked = event.target.checked;
+  const status = await window.__TAURI__.core.invoke('change_file_status', { repoPath: "../../TEST REPO", relativeFilePath: "*", command: event.target.checked ? "Add All" : "Remove All", newFilePath: null });//TODO: Find a better solution for the relative file path parameter. Maybe use Some?
+  props.items.forEach(item => {
+    item.selected = isChecked;
+  });
 };
 </script>
 

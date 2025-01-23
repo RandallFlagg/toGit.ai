@@ -62,11 +62,24 @@ pub fn change_file_status(repo_path: &Path, relative_file_path: &Path, command: 
             index.write()?;
             println!("File added to the index.");
         }
+        "Add All" => {
+            println!("Add All");
+            // Add all changes in the working directory to the index
+            index.add_all(["*"].iter(), IndexAddOption::DEFAULT, None)?;
+            index.write()?;
+            println!("All changes added to the index.");
+        }
         "Remove" => {
             // Remove file from the index
             index.remove_path(relative_file_path)?;//TODO: Change on a conflicted file
             index.write()?;
             println!("File removed from the index.");
+        }
+        "Remove All" => {
+            // Clear the index
+            index.clear()?;
+            index.write()?;
+            println!("All changes removed from the index.");
         }
         "Delete" => {
             // Delete file from the working directory and index
