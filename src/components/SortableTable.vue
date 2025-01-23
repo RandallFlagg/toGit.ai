@@ -4,7 +4,9 @@
       <table>
         <thead>
           <tr>
-            <th><input type="checkbox" @click="toggleAllCheckboxes($event)"></th>
+            <th>
+              <input type="checkbox" :checked="allChecked" @click="toggleAllCheckboxes($event)">
+            </th>
             <th @click="() => sortTable('fileName')">
               File Name
             </th>
@@ -134,13 +136,17 @@ const toggleAllCheckboxes = async (event) => {
     item.selected = isChecked;
   });
 };
+
+const allChecked = computed(() => {
+  return props.items.length > 0 && props.items.every(item => isChecked(item.file_status));
+});
 </script>
 
 <style scoped>
 .split-pane {
   display: flex;
 }
-
+/*TODO: Fix styling for the table. Using element rules!*/
 .table-pane {
   width: 50%;
   overflow-x: auto;
@@ -150,5 +156,29 @@ const toggleAllCheckboxes = async (event) => {
   flex-grow: 1;
   padding: 10px;
   border-left: 1px solid #ccc;
+}
+
+.table-pane {
+  flex: 1;
+  overflow: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 8px;
+  text-align: left;
+  border-bottom: 1px solid #ddd;
+}
+
+th {
+  cursor: pointer;
+}
+
+th input {
+  cursor: default;
 }
 </style>
