@@ -33,15 +33,34 @@ lazy_static! {
 }
 
 #[tauri::command]
-pub fn commit(repo_path: &str) -> Result<String, GitFrontendError> {
+pub fn commit(repo_path: &Path) -> Result<String, GitFrontendError> {
+    println!("AAA1");
     let repo = Repository::open(repo_path)?;
+    println!("AAA2");
     let mut index = repo.index()?;
+    println!("AAA3");
     // Commit the changes
     let oid = index.write_tree()?;
+    println!("AAA4");
     let signature = repo.signature()?;
-    let parent_commit = repo.head()?.peel_to_commit()?;
+    println!("AAA5");
+    // Check if there is a HEAD commit
+    let parent_commit = match repo.head() {
+        Ok(head) => Some(head.peel_to_commit()?),
+        Err(_) => None,
+    };
+    println!("AAA6");
     let tree = repo.find_tree(oid)?;
-    repo.commit(Some("HEAD"), &signature, &signature, "Commit message", &tree, &[&parent_commit])?;
+    println!("AAA7");
+    // Create the commit
+    match parent_commit {
+        Some(parent) => {
+            repo.commit(Some("HEAD"), &signature, &signature, "Commit message", &tree, &[&parent])?;
+        }
+        None => {
+            repo.commit(Some("HEAD"), &signature, &signature, "Initial commit", &tree, &[])?;
+        }
+    }
     println!("Changes committed.");
 
     Ok("Commit Success".to_string())

@@ -11,7 +11,7 @@ pub(crate) enum GitFrontendError {
     #[error("Parse error")]
     Parse(#[from] chrono::ParseError),
     #[error("Git2 error")]
-    Git2(#[from] git2::Error),
+    GitError(git2::Error),
     #[error("Strip prefix error")]
     StripPrefixError(#[from] std::path::StripPrefixError),
     #[error("Invalid repository path")]
@@ -43,6 +43,12 @@ impl Into<InvokeError> for GitFrontendError {
 impl From<String> for GitFrontendError {
     fn from(err: String) -> GitFrontendError {
         GitFrontendError::Other(err)
+    }
+}
+//TODO: Make the messages show on the frontend
+impl From<git2::Error> for GitFrontendError {
+    fn from(err: git2::Error) -> GitFrontendError {
+        GitFrontendError::Other(err.message().to_string())
     }
 }
 

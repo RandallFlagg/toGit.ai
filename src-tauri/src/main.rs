@@ -32,6 +32,7 @@ use crate::components::git_frontend_error::GitFrontendError;
 use crate::git_frontend::git_frontend_module::get_file_content;
 use crate::git_frontend::git_frontend_module::get_repo_status;
 use crate::git_frontend::git_frontend_module::change_file_status;
+use crate::git_frontend::git_frontend_module::commit;
 use crate::logic::app_config::AppConfig;
 
 fn main() -> Result<(), GitFrontendError> {
@@ -209,7 +210,7 @@ fn main_tauri() {
             Ok(())
         })
         .manage(AppConfig::default())
-        .invoke_handler(tauri::generate_handler![get_repo_status, get_file_content, change_file_status /*get_git_data, show_menu*/]) //TODO: Open
+        .invoke_handler(tauri::generate_handler![get_repo_status, get_file_content, change_file_status, commit /*get_git_data, show_menu*/]) //TODO: Open
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

@@ -37,7 +37,7 @@ const selectedItem = ref(null);
 const commandOutput = ref('');
 
 // Function to generate the git command
-const generateCommand = () => {
+const generateCommand = async () => {
   let command = 'git commit';
 
   if (form.value.message) command += ` -m "${form.value.message}"`;
@@ -67,6 +67,8 @@ const generateCommand = () => {
   if (form.value.trailer) command += ` --trailer=${form.value.trailer}`;
 
   commandOutput.value = command;
+  const status = await window.__TAURI__.core.invoke('commit', { repoPath: "../../TEST REPO" });
+    //TODO: Make the error messages show on the frontend
 };
 
 // Function to fetch data (simulate fetching data from somewhere else)
