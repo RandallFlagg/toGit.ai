@@ -1,8 +1,3 @@
-<script setup>
-// import HelloWorld from './components/HelloWorld.vue'
-// import TheWelcome from './components/TheWelcome.vue'
-</script>
-
 <template>
   <header>
     <!-- <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
@@ -12,11 +7,46 @@
     </div> -->
   </header>
 
-  <main>
+  <main id="app">
+    <!-- <button @click="toggleDebugWindow">Toggle Debug Window</button> -->
+    <DebugWindow ref="debugWindowRef" />
     <router-view />
   </main>
 
 </template>
+
+<script setup>
+// import HelloWorld from './components/HelloWorld.vue'
+// import TheWelcome from './components/TheWelcome.vue'
+import { ref, onMounted, onBeforeUnmount } from 'vue';
+import DebugWindow from './components/DebugWindow.vue';
+
+const debugWindowRef = ref(null);
+
+const toggleDebugWindow = () => {
+  // if (debugWindowRef.value) {
+    debugWindowRef.value.toggleVisibility();
+  // }
+};
+
+const handleKeyDown = (event) => {
+  if (event.ctrlKey && event.key === 'D') {
+    toggleDebugWindow();
+  }
+};
+
+onMounted(() => {
+  // debugger;
+  window.addEventListener('keydown', handleKeyDown);
+    // Ensure the debugWindowRef is available globally after mounting
+    // window.debugWindowRef = debugWindowRef;
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', handleKeyDown);
+});
+</script>
+
 <!--
 <script>export default { name: 'App' } </script>
 -->
@@ -46,5 +76,8 @@
     place-items: flex-start;
     flex-wrap: wrap;
   }
+} */
+/* #app {
+  text-align: center;
 } */
 </style>
