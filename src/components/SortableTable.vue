@@ -122,7 +122,7 @@ const getFileDiff = async (filePath) => {
 const changeStatus = async (item, event) => {
   // debugger
   console.log(item);
-  const status = await window.__TAURI__.core.invoke('change_file_status', { repoPath: "../../TEST REPO", relativeFilePath: item.relative_file_path, command: event.target.checked ? "Add" : "Remove", newFilePath: null });
+  const status = await window.__TAURI__.core.invoke('change_file_status', { repoPath: "../../TEST REPO", relativeFilePath: item.relative_file_path, command: event.target.checked ? "Add" : "Unstage", newFilePath: null });
 };
 
 const isChecked = (status) => {
@@ -131,7 +131,8 @@ const isChecked = (status) => {
 
 const toggleAllCheckboxes = async (event) => {
   const isChecked = event.target.checked;
-  const status = await window.__TAURI__.core.invoke('change_file_status', { repoPath: "../../TEST REPO", relativeFilePath: "*", command: event.target.checked ? "Add All" : "Remove All", newFilePath: null });//TODO: Find a better solution for the relative file path parameter. Maybe use Some?
+  //TODO: Need to check a case of modified file after staged
+  const status = await window.__TAURI__.core.invoke('change_file_status', { repoPath: "../../TEST REPO", relativeFilePath: "*", command: event.target.checked ? "Add All" : "Unstage All", newFilePath: null });//TODO: Find a better solution for the relative file path parameter. Maybe use Some?
   props.items.forEach(item => {
     item.selected = isChecked;
   });

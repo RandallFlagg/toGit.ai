@@ -8,6 +8,13 @@ const form = ref({
   message: '',
   all: false,
   amend: false,
+  amendOptions: {
+    message: false,
+    contents: false,
+    author: false,
+    date: false,
+    files: false
+  },
   noEdit: false,
   signoff: false,
   gpgSign: '',
@@ -68,7 +75,7 @@ const generateCommand = async () => {
 
   commandOutput.value = command;
   const status = await window.__TAURI__.core.invoke('commit', { repoPath: "../../TEST REPO" });
-    //TODO: Make the error messages show on the frontend
+  //TODO: Make the error messages show on the frontend
 };
 
 // Function to fetch data (simulate fetching data from somewhere else)
@@ -95,7 +102,8 @@ onMounted(() => {
       <label title="-m, --message <message>" class="commit-message-container">
         Commit Message <!-- <span class="required">*</span> -->
         <span class="help" title="Use the given <message> as the commit message.">?</span>
-        <textarea v-model="form.message" class="commit-message commit-message-box" name="message" placeholder="<message>" required />
+        <textarea v-model="form.message" class="commit-message commit-message-box" name="message"
+          placeholder="<message>" required />
       </label>
       <details>
         <summary>Additional Options</summary>
@@ -188,6 +196,52 @@ onMounted(() => {
             <span class="help" title="Pathspec elements are separated with NUL character.">?</span>
           </label>
         </fieldset>
+        <!-- Amend Options -->
+        <fieldset class="flex-row" v-if="form.amend">
+          <legend>Amend Options</legend>
+
+          <!-- Commit Message -->
+          <div>
+            <input type="checkbox" id="amendMessage" v-model="form.amendOptions.message">
+            <label for="amendMessage">Change Commit Message</label>
+            <span title="Command: git commit --amend -m 'New commit message'">❓</span>
+            <p>Change the commit message to better describe the changes made.</p>
+          </div>
+
+          <!-- Commit Contents -->
+          <div>
+            <input type="checkbox" id="amendContents" v-model="form.amendOptions.contents">
+            <label for="amendContents">Modify Commit Contents</label>
+            <span title="Command: git add <file> && git commit --amend">❓</span>
+            <p>Modify the files included in the commit by adding changes to the staging area and then amending the
+              commit.</p>
+          </div>
+
+          <!-- Author Information -->
+          <div>
+            <input type="checkbox" id="amendAuthor" v-model="form.amendOptions.author">
+            <label for="amendAuthor">Change Author Information</label>
+            <span title="Command: git commit --amend --author='New Author <new.author@example.com>'">❓</span>
+            <p>Change the author and committer information of the commit.</p>
+          </div>
+
+          <!-- Commit Date and Time -->
+          <div>
+            <input type="checkbox" id="amendDate" v-model="form.amendOptions.date">
+            <label for="amendDate">Change Commit Date and Time</label>
+            <span title="Command: GIT_COMMITTER_DATE='YYYY-MM-DD HH:MM:SS' git commit --amend --no-edit">❓</span>
+            <p>Change the date and time of the commit using environment variables.</p>
+          </div>
+
+          <!-- Add or Remove Files -->
+          <div>
+            <input type="checkbox" id="amendFiles" v-model="form.amendOptions.files">
+            <label for="amendFiles">Add or Remove Files</label>
+            <span title="Command: git rm <file> && git add <new-file> && git commit --amend">❓</span>
+            <p>Add or remove files from the commit by staging the necessary changes before amending.</p>
+          </div>
+
+        </fieldset>
 
         <!-- Text Inputs -->
         <fieldset>
@@ -255,6 +309,47 @@ onMounted(() => {
         </fieldset>
 
       </details>
+      <details id="fix">
+        <summary>Commit Amend Details</summary>
+        <pre><code>
+Certainly! Here are the things you can change in a Git commit:
+
+1. **Commit Message:**
+   - You can change the commit message to better describe the changes made.
+   &#96;&#96;&#96;bash
+   git commit --amend -m "New commit message"
+   &#96;&#96;&#96;
+
+2. **Commit Contents:**
+   - You can modify the files included in the commit by adding changes to the staging area and then amending the commit.
+   &#96;&#96;&#96;
+   git add &lt;file&gt;
+   git commit --amend
+   &#96;&#96;&#96;
+
+3. **Author Information:**
+   - You can change the author and committer information of the commit.
+   &#96;&#96;&#96;
+   git commit --amend --author="New Author &lt;new.author@example.com&gt;"
+   &#96;&#96;&#96;
+
+4. **Commit Date and Time:**
+   - You can change the date and time of the commit using the `GIT_COMMITTER_DATE` and `GIT_AUTHOR_DATE` environment variables.
+   &#96;&#96;&#96;
+   GIT_COMMITTER_DATE="YYYY-MM-DD HH:MM:SS" git commit --amend --no-edit
+   &#96;&#96;&#96;
+
+5. **Add or Remove Files:**
+   - You can add or remove files from the commit by staging the necessary changes before amending.
+   &#96;&#96;&#96;
+   git rm &lt;file&gt;
+   git add &lt;new-file&gt;
+   git commit --amend
+   &#96;&#96;&#96;
+
+If you need to add more items in future queries, we'll continue numbering from here. If you have any specific changes in mind or need further details, just let me know! 😊
+</code></pre>
+      </details>
 
       <SortableTable :items="tableData" />
       <!-- <ResizableSplitPane>
@@ -290,10 +385,14 @@ onMounted(() => {
 
 .commit-message-box {
   width: 100%;
-  height: 75px; /* Adjust height as needed */
-  resize: vertical; /* Allows vertical resizing */
+  height: 75px;
+  /* Adjust height as needed */
+  resize: vertical;
+  /* Allows vertical resizing */
   padding: 10px;
-  box-sizing: border-box; /* Ensures padding is included in the width */
-  margin-top: 8px; /* Adds space between label text and textarea */
+  box-sizing: border-box;
+  /* Ensures padding is included in the width */
+  margin-top: 8px;
+  /* Adds space between label text and textarea */
 }
 </style>

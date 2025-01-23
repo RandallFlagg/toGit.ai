@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use file_format::FileFormat;
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-use git2::{BranchType, DiffFormat, DiffLineType, DiffOptions, Error, IndexAddOption, Object, Oid, Repository, Status, StatusOptions};
+use git2::{BranchType, DiffFormat, DiffLineType, DiffOptions, Error, IndexAddOption, IndexEntry, Object, Oid, Repository, Status, StatusOptions};
 use tauri::path;
 // use libgit2_sys::{git_repository, git_repository};
 use crate::components::file_metadata::FileMetadata;
@@ -69,9 +69,11 @@ pub fn commit(repo_path: &Path) -> Result<String, GitFrontendError> {
 #[tauri::command]
 pub fn change_file_status(repo_path: &Path, relative_file_path: &Path, command: &str, new_file_path: Option<&Path>) -> Result<(), GitFrontendError> {
     println!("AAA1");
-    let repo = Repository::open(repo_path)?;
+    let repo = Repository::open(repo_path)?; // Open the repository
+                                             // let repo = Repository::open(repo_path).expect("Failed to open repository"); //TODO: Check which is better here
     println!("AAA2");
-    let mut index = repo.index()?;
+    let mut index = repo.index()?; // Get the index (staging area)
+                                   // let mut index = repo.index().expect("Failed to get index"); //TODO: Check which is better here
 
     match command {
         "Add" => {
@@ -79,7 +81,7 @@ pub fn change_file_status(repo_path: &Path, relative_file_path: &Path, command: 
             // Add file to the index (staging area)
             index.add_path(relative_file_path)?;
             index.write()?;
-            println!("File added to the index.");
+            println!("File added to the index(staged).");
         }
         "Add All" => {
             println!("Add All");
@@ -88,18 +90,18 @@ pub fn change_file_status(repo_path: &Path, relative_file_path: &Path, command: 
             index.write()?;
             println!("All changes added to the index.");
         }
-        "Remove" => {
-            // Remove file from the index
-            index.remove_path(relative_file_path)?;//TODO: Change on a conflicted file
-            index.write()?;
-            println!("File removed from the index.");
-        }
-        "Remove All" => {
-            // Clear the index
-            index.clear()?;
-            index.write()?;
-            println!("All changes removed from the index.");
-        }
+        // "Remove" => {
+        //     // Remove file from the index
+        //     index.remove_path(relative_file_path)?; //TODO: Change on a conflicted file
+        //     index.write()?;
+        //     println!("File removed from the index.");
+        // }
+        // "Remove All" => {
+        //     // Clear the index
+        //     index.clear()?;
+        //     index.write()?;
+        //     println!("All changes removed from the index.");
+        // }
         "Delete" => {
             // Delete file from the working directory and index
             fs::remove_file(relative_file_path)?;
@@ -119,19 +121,99 @@ pub fn change_file_status(repo_path: &Path, relative_file_path: &Path, command: 
                 println!("New file path required for renaming.");
             }
         }
-        "Modify" => {
-            // Simulate file modification
-            // let mut file = fs::OpenOptions::new().write(true).open(file_path)?;
-            // writeln!(file, "\n// Modification made to the file")?;
-            index.add_path(relative_file_path)?;
-            index.write()?;
-            println!("File modified and changes staged.");
-        }
         "Untrack" => {
             // Ensure the file is removed from the index
             index.remove_path(relative_file_path)?;
             index.write()?;
             println!("File is now untracked.");
+        }
+        "Unstage" => {
+            // Check if there is a HEAD commit
+            if let Ok(head) = repo.head() {
+                println!("Unstage1");
+                if let Ok(commit) = head.peel_to_commit() {
+                    println!("Unstage2");
+                    let tree = commit.tree()?;
+
+                    // If the file exists in the HEAD commit, add it back to the index
+                    if let Ok(entry) = tree.get_path(relative_file_path) {
+                        println!("Unstage3");
+                        let blob_id = entry.id();
+
+                        // Create index entry from existing entry
+                        let entry = git2::IndexEntry {
+                            ctime: git2::IndexTime::new(0, 0),
+                            mtime: git2::IndexTime::new(0, 0),
+                            dev: 0,
+                            ino: 0,
+                            mode: entry.filemode() as u32,
+                            uid: 0,
+                            gid: 0,
+                            file_size: 0,
+                            id: blob_id,
+                            flags: 0,
+                            flags_extended: 0,
+                            path: relative_file_path.to_str().unwrap().as_bytes().to_vec(),
+                        };
+
+                        // Add entry to index
+                        index.add(&entry)?;
+                    } else {
+                        // Remove the file from the index
+                        println!("Unstage4");
+                        index.remove_path(relative_file_path)?;
+                    }
+                }
+            }
+
+            // Write the index to disk
+            index.write()?;
+            println!("File unstaged successfully!");
+        }
+        "Unstage All" => {
+            // Get the HEAD commit
+            if let Ok(head) = repo.head() {
+                if let Ok(commit) = head.peel_to_commit() {
+                    let tree = commit.tree()?;
+
+                    // Collect paths of staged files
+                    let staged_paths: Vec<_> = index.iter().map(|entry| Path::new(std::str::from_utf8(&entry.path).unwrap()).to_path_buf()).collect();
+
+                    // Modify the index
+                    for path in staged_paths {
+                        // If the file exists in the HEAD commit, add it back to the index
+                        if let Ok(tree_entry) = tree.get_path(&path) {
+                            let blob_id = tree_entry.id();
+
+                            // Create index entry from existing entry
+                            let entry = git2::IndexEntry {
+                                ctime: git2::IndexTime::new(0, 0),
+                                mtime: git2::IndexTime::new(0, 0),
+                                dev: 0,
+                                ino: 0,
+                                mode: tree_entry.filemode() as u32,
+                                uid: 0,
+                                gid: 0,
+                                file_size: 0,
+                                id: blob_id,
+                                flags: 0,
+                                flags_extended: 0,
+                                path: path.to_str().unwrap().as_bytes().to_vec(),
+                            };
+
+                            // Add entry to index
+                            index.add(&entry)?;
+                        } else {
+                            // File is newly added, remove from index
+                            index.remove_path(&path)?;
+                        }
+                    }
+                }
+            }
+
+            // Write the index to disk
+            index.write()?;
+            println!("All files unstaged successfully!");
         }
         _ => {
             println!("Unknown command."); //TODO: throw an error here
@@ -239,7 +321,7 @@ fn get_repo_status_internal(repo_path: &Path) -> Result<Vec<FileMetadata>, GitFr
     for entry in statuses.iter() {
         let mut full_file_path = PathBuf::from(repo_path);
         full_file_path.push(entry.path().ok_or(git2::Error::from_str("Invalid UTF-8 path"))?);
-        if full_file_path.is_dir(){
+        if full_file_path.is_dir() {
             //TODO: What should happen in case of a dir?
             continue;
         }
@@ -299,7 +381,7 @@ fn get_file_metadata(full_file_path: &PathBuf, status: &str, repo_root: &Path) -
         .to_str()
         .expect("Invalid UTF-8 in file name")
         .to_string();
-        let file = fs::File::open(full_file_path)?;
+    let file = fs::File::open(full_file_path)?;
     let file_format = determine_file_format2(full_file_path)?; //TODO: Cache the result of this call
     let metadata = metadata(full_file_path)?;
     let modified_time = metadata.modified().unwrap_or(SystemTime::now());
