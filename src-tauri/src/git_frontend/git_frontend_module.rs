@@ -6,6 +6,7 @@ use tauri::path;
 // use libgit2_sys::{git_repository, git_repository};
 use crate::components::file_metadata::FileMetadata;
 use crate::components::git_frontend_error::GitFrontendError;
+use crate::REPO_PATH; //TODO: Remove this?
 use binaryornot::is_binary;
 use infer;
 use lazy_static::lazy_static;
@@ -309,6 +310,26 @@ pub fn get_repo_status(repo_path: &Path) -> Result<Vec<FileMetadata>, GitFronten
         Err(e) => Err(e), // Propagate the error from the internal function
     }
     // get_repo_status_internal(repo_path).map_err(|e| e.to_string())
+}
+
+fn get_repo_tracked() -> Result<Vec<FileMetadata>, GitFrontendError> {
+    let repo_path = REPO_PATH.get().unwrap();
+    // Open the repository
+    let repo = Repository::open(repo_path)?;
+    // Get the index (staging area)
+    let index = repo.index().expect("Failed to get index");
+    // Collect all tracked files
+    let mut tracked_files = Vec::new();
+    for entry in index.iter() {
+        let path = entry.path.clone();
+        tracked_files.push(Path::from(path).display().to_string());
+    }
+
+    tracked_files
+    // // Print the tracked files
+    // for file in tracked_files {
+    //     println!("{}", file);
+    // }
 }
 
 fn get_repo_status_internal(repo_path: &Path) -> Result<Vec<FileMetadata>, GitFrontendError> {

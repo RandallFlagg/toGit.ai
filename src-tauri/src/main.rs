@@ -4,12 +4,15 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use git2::Error;
+use git2::{Error, Repository};
 // https://confidence.sh/blog/rust-module-system-explained/
 use log::{debug, info};
 use mime_guess::from_path;
+use std::cell::OnceCell;
 use std::env;
 use std::path::{Path, PathBuf};
+use std::process::exit;
+use std::sync::OnceLock;
 use std::time::SystemTime;
 use tauri::{generate_context, State};
 use tauri::{
@@ -29,11 +32,13 @@ mod git_frontend;
 mod logic;
 use crate::components::file_metadata::FileMetadata;
 use crate::components::git_frontend_error::GitFrontendError;
-use crate::git_frontend::git_frontend_module::get_file_content;
-use crate::git_frontend::git_frontend_module::get_repo_status;
 use crate::git_frontend::git_frontend_module::change_file_status;
 use crate::git_frontend::git_frontend_module::commit;
+use crate::git_frontend::git_frontend_module::get_file_content;
+use crate::git_frontend::git_frontend_module::get_repo_status;
 use crate::logic::app_config::AppConfig;
+
+static REPO_PATH: OnceLock<PathBuf> = OnceLock::new();
 
 fn main() -> Result<(), GitFrontendError> {
     // match generate_diff("../../TEST REPO", "a") {//TEST1/b.txt .a.kate-swp
@@ -63,9 +68,9 @@ fn main() -> Result<(), GitFrontendError> {
 
 //TODO: Write a whole scenario to be able to test all the changes. Write it in TDD.
 fn main_change_file_status() -> Result<(), GitFrontendError> {
-    let repo_path = Path::new("../../TEST REPO");//.exists();
+    let repo_path = Path::new("../../TEST REPO"); //.exists();
     match get_repo_status(&repo_path) {
-        Ok(it) => println!("{:?}",it),
+        Ok(it) => println!("{:?}", it),
         Err(err) => return Err(err),
     };
 
@@ -73,8 +78,8 @@ fn main_change_file_status() -> Result<(), GitFrontendError> {
     // if let Some(value) = git_add(repo_path, file_path) {
     //         return value;
     //     }
-    
-        let file_path = Path::new("a");
+
+    let file_path = Path::new("a");
     if let Some(value) = git_remove(repo_path, file_path) {
         return value;
     }
@@ -93,12 +98,11 @@ fn git_remove(repo_path: &Path, file_path: &Path) -> Option<Result<(), GitFronte
         eprintln!("Error: {}", e);
     }
     match get_repo_status(&repo_path) {
-        Ok(it) => println!("{:?}",it),
+        Ok(it) => println!("{:?}", it),
         Err(err) => return Some(Err(err)),
     };
     // Change this to "Remove", "Commit", "Delete", "Rename", etc.
     // Required for renaming
-
 
     None
 }
@@ -110,7 +114,7 @@ fn git_add(repo_path: &Path, file_path: &Path) -> Option<Result<(), GitFrontendE
         eprintln!("Error: {}", e);
     }
     match get_repo_status(&repo_path) {
-        Ok(it) => println!("{:?}",it),
+        Ok(it) => println!("{:?}", it),
         Err(err) => return Some(Err(err)),
     };
     // Change this to "Remove", "Commit", "Delete", "Rename", etc.
@@ -170,6 +174,41 @@ fn main_filesystem(full_file_path: &str) -> Result<(), GitFrontendError> {
 
 //TODO: Add an option to send the repo path from the command line
 fn main_tauri() {
+    // Get the command-line arguments
+    let args: Vec<String> = env::args().collect();
+
+    // Determine the path based on whether a parameter was passed
+    let mut path: PathBuf = if args.len() > 1 {
+        // Use the first parameter as the path and convert it to an absolute path
+        // let input_path = PathBuf::from(&args[1]);
+        PathBuf::from(&args[1]).canonicalize().expect("Failed to get absolute path")
+    } else {
+        // Use the current directory and convert it to an absolute path
+        env::current_dir().expect("Failed to get current directory")
+    };
+
+    //TODO: Remove the following code and the mut from path. For develpment purpose only.
+    path = PathBuf::from("../TEST REPO");
+
+    // Print the absolute path
+    println!("Absolute path: {}", path.display());
+
+    // Try to open the repository
+    match Repository::discover(path) {
+        Ok(repo) => {
+            println!("This is a Git repository.");
+            // Initialize the global variable if not already initialized
+            REPO_PATH.set(repo.path().to_path_buf()).expect("Failed to set global variable");
+        }
+        Err(_) => {
+            eprintln!("Error: The specified path is not a Git repository.");
+            exit(1)
+        }
+    }
+
+    // Optionally, print the repository path
+    println!("Repository path: {}", REPO_PATH.get().unwrap().to_string_lossy());
+
     tauri::Builder::default()
         .setup(|app| {
             let settings = MenuItemBuilder::new("Settings...").id("settings").accelerator("CmdOrCtrl+,").build(app)?;
@@ -210,7 +249,12 @@ fn main_tauri() {
             Ok(())
         })
         .manage(AppConfig::default())
-        .invoke_handler(tauri::generate_handler![get_repo_status, get_file_content, change_file_status, commit /*get_git_data, show_menu*/]) //TODO: Open
+        .invoke_handler(tauri::generate_handler![
+            get_repo_status,
+            get_file_content,
+            change_file_status,
+            commit /*get_git_data, show_menu*/
+        ]) //TODO: Open
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

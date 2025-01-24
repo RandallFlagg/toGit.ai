@@ -1,65 +1,84 @@
 <template>
-  <div class="split-pane">
-    <div class="table-pane">
-      <table>
-        <thead>
-          <tr>
-            <th>
-              <input type="checkbox" :checked="allChecked" @click="toggleAllCheckboxes($event)">
-            </th>
-            <th @click="() => sortTable('fileName')">
-              File Name
-            </th>
-            <th @click="() => sortTable('fileType')">
-              File Type
-            </th>
-            <th @click="() => sortTable('status')">
-              Status
-            </th>
-            <th @click="() => sortTable('size')">
-              Size
-            </th>
-            <!-- <th @click="() => sortTable('full_file_path')">
+  <div class="container">
+    <nav class="breadcrumb">
+      <ul>
+        <li><span>Select:</span></li>
+        <li><a href="#" :class="{ disabled: !navEnabled.tracked }" @click="toggleNav('tracked')">Tracked</a></li>
+        <li><a href="#" :class="{ disabled: !navEnabled.untracked }" @click="toggleNav('untracked')">Untracked</a></li>
+        <li><a href="#" :class="{ disabled: !navEnabled.added }" @click="toggleNav('added')">Added</a></li>
+        <li><a href="#" :class="{ disabled: !navEnabled.deleted }" @click="toggleNav('deleted')">Deleted</a></li>
+        <li><a href="#" :class="{ disabled: !navEnabled.modified }" @click="toggleNav('modified')">Modified</a></li>
+        <li><a href="#" :class="{ disabled: !navEnabled.files }" @click="toggleNav('files')">Files</a></li>
+        <li><a href="#" :class="{ disabled: !navEnabled.submodules }" @click="toggleNav('submodules')">Submodules</a>
+        </li>
+      </ul>
+    </nav>
+    <div class="content">
+      <div class="table-pane">
+        <table>
+          <thead>
+            <tr>
+              <th>
+                <input type="checkbox" :checked="allChecked" @click="toggleAllCheckboxes($event)">
+              </th>
+              <th @click="() => sortTable('fileName')">
+                File Name
+              </th>
+              <th @click="() => sortTable('fileType')">
+                File Type
+              </th>
+              <th @click="() => sortTable('status')">
+                Status
+              </th>
+              <th @click="() => sortTable('size')">
+                Size
+              </th>
+              <!-- <th @click="() => sortTable('full_file_path')">
               Full File Path
             </th> -->
-            <th @click="() => sortTable('relative_file_path')">
-              Relative File Path
-            </th>
-            <th @click="() => sortTable('fileExtension')">
-              File Extension
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="item in sortedItems" :key="item.id" @click="() => selectItem(item)">
-            <td>
-              <input v-model="item.selected" type="checkbox" :checked="isChecked(item.file_status)" @click.stop="changeStatus(item, $event)">
-            </td>
-            <td>{{ item.file_name }}</td>
-            <td>{{ item.file_type }}</td>
-            <td>{{ statuses[item.file_status] }}</td>
-            <td>{{ item.size }}</td>
-            <!-- <td>{{ item.full_file_path }}</td> -->
-            <td>{{ item.relative_file_path }}</td>
-            <td>{{ item.file_extension }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <div class="preview-pane">
-      <div v-if="selectedItem">
-        <h3>Preview: {{ selectedItem.file_name }}</h3>
-        <p>{{ previewText }}</p><!--TODO: Do we still need this? remove-->
-        <DiffViewer :diffString="diffString" />
+              <th @click="() => sortTable('relative_file_path')">
+                Relative File Path
+              </th>
+              <th @click="() => sortTable('fileExtension')">
+                File Extension
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="item in sortedItems" :key="item.id" @click="() => selectItem(item)">
+              <td>
+                <input v-model="item.selected" type="checkbox" :checked="isChecked(item.file_status)"
+                  @click.stop="changeStatus(item, $event)">
+              </td>
+              <td>{{ item.file_name }}</td>
+              <td>{{ item.file_type }}</td>
+              <td>{{ statuses[item.file_status] }}</td>
+              <td>{{ item.size }}</td>
+              <!-- <td>{{ item.full_file_path }}</td> -->
+              <td>{{ item.relative_file_path }}</td>
+              <td>{{ item.file_extension }}</td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-      <div v-else>
-        <h3>Select an item to preview</h3>
+      <div class="preview-pane">
+        <div v-if="selectedItem">
+        <DiffViewer :diffString="diffString" />
+        </div>
+        <div v-else>
+          <h3>Select an item to preview</h3>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
+//TODO: Updated status as the checkbox is being de/selected
+//TODO: Make the preview float to the right? Find a better solution for the preview pane
+//TODO: Implmeent the selection buttons for the differnt files types
+//TODO: What should be shown in the preview pane when a file is selected? Modofied, Staged, Untracked, Deleted, etc.
+
 import { ref, computed } from 'vue';
 import DiffViewer from './DiffViewer.vue';
 
@@ -90,6 +109,26 @@ const sortOrder = ref('asc');
 const selectedItem = ref(null);
 const previewText = ref('');
 const diffString = ref('');
+const navEnabled = ref({
+  untracked: false,
+  tracked: false,
+  added: false,
+  deleted: false,
+  modified: false,
+  files: false,
+  submodules: false
+});
+
+const toggleNav = (section, statusPrefix) => {
+  TAURI //TODO: Implement the Tauri API to get the status of the files
+  navEnabled.value[section] = !navEnabled.value[section];
+  props.items.forEach(item => {
+    if (item.file_status.startsWith(statusPrefix)) {
+      item.selected = true;
+      changeStatus(item, { target: { checked: true } });
+    }
+  });
+};
 
 const sortedItems = computed(() => {
   return [...props.items].sort((a, b) => {
@@ -144,13 +183,50 @@ const allChecked = computed(() => {
 </script>
 
 <style scoped>
-.split-pane {
+.container {
+  display: flex;
+  flex-direction: column;
+}
+
+.content {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+}
+
+/* Breadcrumb styles */
+.breadcrumb {
+  margin-bottom: 10px;
+}
+
+.breadcrumb ul {
+  list-style: none;
+  padding: 0;
   display: flex;
 }
+
+.breadcrumb li {
+  margin-right: 5px;
+}
+
+.breadcrumb a {
+  text-decoration: none;
+  color: #007bff;
+}
+
+.breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.breadcrumb a.disabled {
+  /* pointer-events: none; */
+  color: grey;
+}
+
 /*TODO: Fix styling for the table. Using element rules!*/
 .table-pane {
-  width: 50%;
-  overflow-x: auto;
+  /* width: 50%; */
+  /* overflow-x: auto; */
   flex: 1;
   overflow: auto;
 }
@@ -161,17 +237,13 @@ const allChecked = computed(() => {
   border-left: 1px solid #ccc;
 }
 
-.table-pane {
-  flex: 1;
-  overflow: auto;
-}
-
 table {
   width: 100%;
   border-collapse: collapse;
 }
 
-th, td {
+th,
+td {
   padding: 8px;
   text-align: left;
   border-bottom: 1px solid #ddd;

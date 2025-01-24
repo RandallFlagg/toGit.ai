@@ -39,7 +39,7 @@ const showDiff = () => {
 watch(() => props.diffString, (newVal) => {
     // debugger
     if (newVal === "Binary file") {
-        renderedDiff.value = newVal;
+        renderedDiff.value = `<h3>Preview: ${newVal}</h3>`;
     }
     else if (newVal) {
         showDiff();
@@ -47,10 +47,19 @@ watch(() => props.diffString, (newVal) => {
     else {
         //TODO: add support for showing diff or content of file that has the same content(e.g. untracked)
         //TODO: Need to handle a situation when a file is already staged
-        renderedDiff.value = "No Changes";
+        renderedDiff.value = "<h3>Preview: No Changes</h3>";
     }
 }, { immediate: true });
 </script>
 
 
-<style scoped></style>
+<style scoped>
+
+</style>
+
+<style>
+/* TODO: This is a hack to hide the title of the diff viewer. This should be fixed. */
+.d2h-file-list-wrapper {
+    display: none;
+}
+</style>
