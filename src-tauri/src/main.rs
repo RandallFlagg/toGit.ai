@@ -36,9 +36,8 @@ use crate::git_frontend::git_frontend_module::change_file_status;
 use crate::git_frontend::git_frontend_module::commit;
 use crate::git_frontend::git_frontend_module::get_file_content;
 use crate::git_frontend::git_frontend_module::get_repo_status;
-use crate::logic::app_config::AppConfig;
-
-static REPO_PATH: OnceLock<PathBuf> = OnceLock::new();
+use crate::git_frontend::git_frontend_module::is_git_repo;
+use crate::git_frontend::app_config::AppConfig;
 
 fn main() -> Result<(), GitFrontendError> {
     // match generate_diff("../../TEST REPO", "a") {//TEST1/b.txt .a.kate-swp
@@ -69,7 +68,7 @@ fn main() -> Result<(), GitFrontendError> {
 //TODO: Write a whole scenario to be able to test all the changes. Write it in TDD.
 fn main_change_file_status() -> Result<(), GitFrontendError> {
     let repo_path = Path::new("../../TEST REPO"); //.exists();
-    match get_repo_status(&repo_path) {
+    match get_repo_status() {
         Ok(it) => println!("{:?}", it),
         Err(err) => return Err(err),
     };
@@ -97,7 +96,7 @@ fn git_remove(repo_path: &Path, file_path: &Path) -> Option<Result<(), GitFronte
     if let Err(e) = change_file_status(repo_path, file_path, command, new_file_path) {
         eprintln!("Error: {}", e);
     }
-    match get_repo_status(&repo_path) {
+    match get_repo_status() {
         Ok(it) => println!("{:?}", it),
         Err(err) => return Some(Err(err)),
     };
@@ -113,7 +112,7 @@ fn git_add(repo_path: &Path, file_path: &Path) -> Option<Result<(), GitFrontendE
     if let Err(e) = change_file_status(repo_path, file_path, command, new_file_path) {
         eprintln!("Error: {}", e);
     }
-    match get_repo_status(&repo_path) {
+    match get_repo_status() {
         Ok(it) => println!("{:?}", it),
         Err(err) => return Some(Err(err)),
     };
@@ -132,7 +131,7 @@ fn main_filesystem(full_file_path: &str) -> Result<(), GitFrontendError> {
     let repo_path = Path::new(full_file_path);
     // let file_metadata = get_file_metadata(full_file_path)?;//TODO: If this is to be used it should be imported. currentlly private.
     // println!("RESULT: {:?}", file_metadata); // Print the struct
-    let repo_changes = get_repo_status(repo_path)?;
+    let repo_changes = get_repo_status()?;
     println!("RESULT: {:?}", repo_changes);
     Ok(())
 }
@@ -174,40 +173,25 @@ fn main_filesystem(full_file_path: &str) -> Result<(), GitFrontendError> {
 
 //TODO: Add an option to send the repo path from the command line
 fn main_tauri() {
+    env_logger::init();
     // Get the command-line arguments
-    let args: Vec<String> = env::args().collect();
-
-    // Determine the path based on whether a parameter was passed
-    let mut path: PathBuf = if args.len() > 1 {
-        // Use the first parameter as the path and convert it to an absolute path
-        // let input_path = PathBuf::from(&args[1]);
-        PathBuf::from(&args[1]).canonicalize().expect("Failed to get absolute path")
-    } else {
-        // Use the current directory and convert it to an absolute path
-        env::current_dir().expect("Failed to get current directory")
-    };
-
+    #[cfg(not(debug_assertions))]
+    let repo_path = env::args().nth(1).map(PathBuf::from).unwrap_or_else(|| {
+        eprintln!("No repository path provided.");
+        None
+    });
+    
+    // #[cfg(all(debug_assertions, feature = "testing"))]
+    #[cfg(debug_assertions)]
     //TODO: Remove the following code and the mut from path. For develpment purpose only.
-    path = PathBuf::from("../TEST REPO");
+    let repo_path = PathBuf::from("../../TEST REPO");
 
-    // Print the absolute path
-    println!("Absolute path: {}", path.display());
-
-    // Try to open the repository
-    match Repository::discover(path) {
-        Ok(repo) => {
-            println!("This is a Git repository.");
-            // Initialize the global variable if not already initialized
-            REPO_PATH.set(repo.path().to_path_buf()).expect("Failed to set global variable");
-        }
-        Err(_) => {
-            eprintln!("Error: The specified path is not a Git repository.");
-            exit(1)
-        }
+    if is_git_repo(Some(repo_path)) {
+        println!("It is a git repo");
+    } else {
+        println!("It is not a git repo");
+        exit(0);
     }
-
-    // Optionally, print the repository path
-    println!("Repository path: {}", REPO_PATH.get().unwrap().to_string_lossy());
 
     tauri::Builder::default()
         .setup(|app| {
@@ -248,6 +232,9 @@ fn main_tauri() {
 
             Ok(())
         })
+        // User Settings: Store user preferences or settings that can be accessed and modified throughout the application.
+        // Database Connection Pool: Manage a pool of database connections that can be shared across different parts of the application.
+        // Authentication State: Keep track of user authentication status and related information.
         .manage(AppConfig::default())
         .invoke_handler(tauri::generate_handler![
             get_repo_status,

@@ -1,5 +1,5 @@
 use crate::components::graph_node::GraphNode;
-use crate::logic::app_config::AppConfig;
+use crate::git_frontend::app_config::AppConfig;
 use git2::Repository;
 use serde::Serialize;
 use std::collections::HashMap;

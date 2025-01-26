@@ -2,36 +2,43 @@ use chrono::{DateTime, Utc};
 use file_format::FileFormat;
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 use git2::{BranchType, DiffFormat, DiffLineType, DiffOptions, Error, IndexAddOption, IndexEntry, Object, Oid, Repository, Status, StatusOptions};
-use tauri::path;
+use tauri::{path, App};
 // use libgit2_sys::{git_repository, git_repository};
 use crate::components::file_metadata::FileMetadata;
 use crate::components::git_frontend_error::GitFrontendError;
-use crate::REPO_PATH; //TODO: Remove this?
+// use crate::REPO_PATH; //TODO: Remove this?
 use binaryornot::is_binary;
 use infer;
-use lazy_static::lazy_static;
+// use lazy_static::lazy_static;
 use log::debug;
 use mime_guess::from_path;
 use serde::Serialize;
 use shellexpand;
+use std::cell::{OnceCell, RefCell};
 use std::collections::{HashMap, HashSet};
+use std::env;
 use std::fs::{self, metadata, File};
 use std::io::Read;
 use std::ops::ControlFlow;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::Mutex;
+use std::sync::{LazyLock, Mutex, OnceLock};
 use std::time::SystemTime;
 use std::{
     io,
     path::{Path, PathBuf},
 };
 
+use crate::git_frontend::app_config::AppConfig;
 // #[macro_use]
 // extern crate lazy_static;
 
-lazy_static! {
-    static ref FILE_FORMAT_CACHE: Mutex<HashMap<PathBuf, String>> = Mutex::new(HashMap::new());
-}
+// static CONFIG: OnceLock<AppConfig> = OnceLock::new();
+static CONFIG: OnceLock<Mutex<AppConfig>> = OnceLock::new();
+// static CONFIG: OnceCell<RefCell<AppConfig>> = OnceCell::new();
+static FILE_FORMAT_CACHE: LazyLock<Mutex<HashMap<PathBuf, String>>> = LazyLock::new(|| Mutex::new(HashMap::new()));
+// lazy_static! {
+//     static ref FILE_FORMAT_CACHE: Mutex<HashMap<PathBuf, String>> = Mutex::new(HashMap::new());
+// }
 
 #[tauri::command]
 pub fn commit(repo_path: &Path) -> Result<String, GitFrontendError> {
@@ -299,13 +306,9 @@ pub fn get_file_content(repo_path: PathBuf, relative_file_path: PathBuf) -> Resu
 ///
 /// * `Result<Vec<FileMetadata>, GitFrontendError>` - A vector of `FileMetadata` on success, or a `GitFrontendError` on failure.
 #[tauri::command]
-pub fn get_repo_status(repo_path: &Path) -> Result<Vec<FileMetadata>, GitFrontendError> {
-    if !repo_path.exists() || !repo_path.is_dir() {
-        return Err(GitFrontendError::InvalidPath("Invalid repository path".to_string()));
-    }
-
+pub fn get_repo_status() -> Result<Vec<FileMetadata>, GitFrontendError> {
     // Call the internal function to get the repository status
-    match get_repo_status_internal(repo_path) {
+    match get_repo_status_internal() {
         Ok(status) => Ok(status),
         Err(e) => Err(e), // Propagate the error from the internal function
     }
@@ -313,26 +316,35 @@ pub fn get_repo_status(repo_path: &Path) -> Result<Vec<FileMetadata>, GitFronten
 }
 
 fn get_repo_tracked() -> Result<Vec<FileMetadata>, GitFrontendError> {
-    let repo_path = REPO_PATH.get().unwrap();
+    let config = CONFIG.get().unwrap().lock().unwrap();
+    let repo_path = config.repo_path_as_path();
     // Open the repository
     let repo = Repository::open(repo_path)?;
     // Get the index (staging area)
     let index = repo.index().expect("Failed to get index");
     // Collect all tracked files
-    let mut tracked_files = Vec::new();
-    for entry in index.iter() {
-        let path = entry.path.clone();
-        tracked_files.push(Path::from(path).display().to_string());
+    // let mut tracked_files = Vec::new();
+    // let repo_root = CONFIG.get().unwrap().lock().unwrap().repo_path_as_path();
+
+    let tracked_files = index
+        .iter()
+        .map(|entry| {
+            let path = String::from_utf8(entry.path.clone()).expect("Invalid UTF-8 sequence");
+            get_file_metadata(PathBuf::from(path), "status11", repo_path)
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
+    // Print the tracked files
+    for file in &tracked_files {
+        println!("{:?}", file);
     }
 
-    tracked_files
-    // // Print the tracked files
-    // for file in tracked_files {
-    //     println!("{}", file);
-    // }
+    Ok(tracked_files)
 }
 
-fn get_repo_status_internal(repo_path: &Path) -> Result<Vec<FileMetadata>, GitFrontendError> {
+fn get_repo_status_internal() -> Result<Vec<FileMetadata>, GitFrontendError> {
+    let config = CONFIG.get().unwrap().lock().unwrap();
+    let repo_path = config.repo_path_as_path();
     // Open the repository
     let repo = Repository::open(repo_path)?;
     // Get the status options and status entries
@@ -394,26 +406,22 @@ fn show_menu() -> Vec<&'static str> {
     unimplemented!("This function is not yet implemented.");
 }
 
-fn get_file_metadata(full_file_path: &PathBuf, status: &str, repo_root: &Path) -> Result<FileMetadata, GitFrontendError> {
+fn get_file_metadata<P: AsRef<Path>>(full_file_path: P, status: &str, repo_root: &Path) -> Result<FileMetadata, GitFrontendError> {
+    let path_ref: &Path = full_file_path.as_ref();
     static ID_COUNTER: AtomicUsize = AtomicUsize::new(1);
-    let file_name = full_file_path
-        .file_name()
-        .expect("File not found")
-        .to_str()
-        .expect("Invalid UTF-8 in file name")
-        .to_string();
-    let file = fs::File::open(full_file_path)?;
-    let file_format = determine_file_format2(full_file_path)?; //TODO: Cache the result of this call
-    let metadata = metadata(full_file_path)?;
+    let file_name = path_ref.file_name().expect("File not found").to_str().expect("Invalid UTF-8 in file name").to_string();
+    let file = fs::File::open(path_ref)?;
+    let file_format = determine_file_format2(path_ref)?; //TODO: Cache the result of this call
+    let metadata = metadata(path_ref)?;
     let modified_time = metadata.modified().unwrap_or(SystemTime::now());
     let modified_at = system_time_to_naive_date_time(modified_time);
     let file_metadata = FileMetadata {
         id: ID_COUNTER.fetch_add(1, Ordering::SeqCst),
         // change_type: change_type.to_string(),
         file_name: file_name,
-        full_file_path: full_file_path.to_string_lossy().to_string(), //TODO: Convert to base64 in order to handle non utf-8 path. Need to check on what OS this is valid to make sure we need to handle this.
-        relative_file_path: full_file_path.strip_prefix(repo_root).unwrap_or(full_file_path).to_string_lossy().to_string(), //TODO: Make this path relative to the file and not as it is now, full. //TODO: Convert to base64 in order to handle non utf-8 path. Need to check on what OS this is valid to make sure we need to handle this.
-        file_extension: full_file_path.extension().and_then(|ext| ext.to_str()).unwrap_or("").to_string(),
+        full_file_path: path_ref.to_string_lossy().to_string(), //TODO: Convert to base64 in order to handle non utf-8 path. Need to check on what OS this is valid to make sure we need to handle this.
+        relative_file_path: path_ref.strip_prefix(repo_root).unwrap_or(path_ref).to_string_lossy().to_string(), //TODO: Make this path relative to the file and not as it is now, full. //TODO: Convert to base64 in order to handle non utf-8 path. Need to check on what OS this is valid to make sure we need to handle this.
+        file_extension: path_ref.extension().and_then(|ext| ext.to_str()).unwrap_or("").to_string(),
         file_type: file_format,
         file_status: status.to_string(),
         size: file.metadata()?.len().to_string(), // size: format!("{:.2} KB", file.metadata()?.len() as f64 / 1024.0), // Get size in KB //TODO: Format
@@ -572,4 +580,66 @@ fn generate_file_diff_with_git2(repo_path: PathBuf, relative_file_name: PathBuf)
     println!("{}", "D");
     println!("DIFF: {}", diff_output);
     Ok(diff_output)
+}
+
+//TODO: Change to init?
+pub fn is_git_repo(path: Option<PathBuf>) -> bool {
+    // // Initialize CONFIG if not already initialized
+    CONFIG.set(Mutex::new(AppConfig::default())).unwrap_or_else(|_| {
+        eprintln!("CONFIG is already initialized");
+    });
+
+    // if !repo_path.exists() || !repo_path.is_dir() {
+    //     return Err(GitFrontendError::InvalidPath("Invalid repository path".to_string()));
+    // }
+
+    // Determine the path based on whether a parameter was passed
+    let repo_path = match path {
+        Some(path) => {
+            println!("The CWD is: {}", env::current_dir().expect("Failed to get current directory").display());
+            // Use the first parameter as the path and convert it to an absolute path
+            path.canonicalize().expect("Failed to get absolute path")
+        }
+        None => {
+            // Use the current directory and convert it to an absolute path
+            debug!("Using the current directory.");
+            env::current_dir().expect("Failed to get current directory")
+        }
+    };
+
+    // Print the absolute path
+    debug!("The repo path is: {}", repo_path.display());
+
+    // Try to open the repository
+    match Repository::discover(repo_path) {
+        Ok(repo) => {
+            println!("This is a Git repository.");
+            // Initialize the global variable if not already initialized
+            let mut config = CONFIG.get().unwrap().lock().unwrap();
+            debug!("AAA1");
+            config.set_repo_path(repo.path().to_str().unwrap()); //TODO: Do we want this? .expect("Failed to set global variable");
+            debug!("AAA2");
+            println!("Repository path: {}", config.repo_path_as_str());
+            return true;
+        }
+        Err(_) => {
+            eprintln!("Error: The specified path is not a Git repository.");
+            // exit(1)
+            return false;
+        }
+    }
+}
+
+//fn use_library(settings: State<'_, Mutex<Settings>>) {
+fn use_library() {
+    // let config = CONFIG.get().unwrap().lock().unwrap();
+    // match *config {
+    //     Some(ref config) => {
+    //         println!("Using library with parameter: {}", config.parameter);
+    //     }
+    //     None => {
+    //         println!("Error: Library is not initialized. Please call init_library first.");
+    //     }
+    // }
+    todo!("What do we want to do here?")
 }

@@ -15,10 +15,10 @@ name = "togitai_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2", features = [] }
+tauri-build = { version = "*", features = [] } #2.0.5
 
 [dependencies]
-tauri = { version = "*", features = [] } #2
+tauri = { version = "*", features = [] } #2.2.5
 tauri-plugin-shell = "*" #2.2.0
 #tauri-plugin-opener = "2"
 serde = { version = "*", features = ["derive"] } #1.0.216
@@ -36,7 +36,11 @@ file-format = "*"
 mime_guess = "*"
 infer = "*"
 binaryornot = "*"
-lazy_static = "*"
+# lazy_static = "*"
 
 [dev-dependencies]
 rustfmt = "*" #2.0.0" # Or the latest version you want to use
+
+[features]
+debug = []
+testing = []

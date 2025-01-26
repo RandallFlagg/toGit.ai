@@ -8,7 +8,7 @@
     "beforeBuildCommand": "pnpm run build",
     "beforeDevCommand": "pnpm run dev",
     "devUrl": "http://localhost:5173",
-     "frontendDist": "../src/index.html"
+    "frontendDist": "../src/index.html"
   },
   "app": {
     "withGlobalTauri": true,
@@ -48,13 +48,6 @@
     "shortDescription": "",
     "targets": [
       "app"
-    ],
-    "icon": [
-      "icons/32x32.png",
-      "icons/128x128.png",
-      "icons/128x128@2x.png",
-      "icons/icon.icns",
-      "icons/icon.ico"
     ]
   },
   "plugins": {}
