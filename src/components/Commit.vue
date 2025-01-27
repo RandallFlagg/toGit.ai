@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref } from 'vue';
 // import ResizableSplitPane from './ResizableSplitPane.vue';
 import SortableTable from './SortableTable.vue';
 
@@ -77,16 +77,6 @@ const generateCommand = async () => {
   const status = await window.__TAURI__.core.invoke('commit', { repoPath: "../../TEST REPO" });
   //TODO: Make the error messages show on the frontend
 };
-
-// Function to fetch data (simulate fetching data from somewhere else)
-const fetchData = async () => {
-  const fetchedData = await window.__TAURI__.core.invoke('get_repo_status', {});
-  tableData.value = fetchedData;
-};
-
-onMounted(() => {
-  fetchData();
-});
 </script>
 
 <template>
@@ -349,7 +339,7 @@ If you need to add more items in future queries, we'll continue numbering from h
 </code></pre>
       </details>
 
-      <SortableTable :items="tableData" />
+      <SortableTable />
       <!-- <ResizableSplitPane>
         <template #left>
           <SortableTable :items="tableData" />

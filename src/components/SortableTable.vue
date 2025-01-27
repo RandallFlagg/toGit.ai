@@ -1,5 +1,7 @@
 <template>
   <div class="container">
+    <!-- TODO: Fix position -->
+    <button @click="myFunc">Update Table</button>
     <nav class="breadcrumb">
       <ul>
         <li><span>Select:</span></li>
@@ -73,13 +75,13 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 //TODO: Updated status as the checkbox is being de/selected
 //TODO: Make the preview float to the right? Find a better solution for the preview pane
 //TODO: Implmeent the selection buttons for the differnt files types
 //TODO: What should be shown in the preview pane when a file is selected? Modofied, Staged, Untracked, Deleted, etc.
 
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted } from 'vue';
 import DiffViewer from './DiffViewer.vue';
 
 const statuses = {
@@ -97,13 +99,7 @@ const statuses = {
   "CONFLICTED": "Conflicted",
 };
 
-const props = defineProps({
-  items: {
-    type: Array,
-    required: true
-  }
-});
-
+const tableData = ref([]);
 const sortColumn = ref('');
 const sortOrder = ref('asc');
 const selectedItem = ref(null);
@@ -119,10 +115,21 @@ const navEnabled = ref({
   submodules: false
 });
 
+// Function to fetch data (simulate fetching data from somewhere else)
+const fetchData = async () => {
+  const fetchedData = await window.__TAURI__.core.invoke('get_repo_status', {});
+  tableData.value = fetchedData;
+};
+
+onMounted(() => {
+  fetchData();
+});
+
 const toggleNav = (section, statusPrefix) => {
+  debugger;
   TAURI //TODO: Implement the Tauri API to get the status of the files
   navEnabled.value[section] = !navEnabled.value[section];
-  props.items.forEach(item => {
+  tableData.value.forEach(item => {
     if (item.file_status.startsWith(statusPrefix)) {
       item.selected = true;
       changeStatus(item, { target: { checked: true } });
@@ -131,7 +138,7 @@ const toggleNav = (section, statusPrefix) => {
 };
 
 const sortedItems = computed(() => {
-  return [...props.items].sort((a, b) => {
+  return [...tableData.value].sort((a, b) => {
     if (a[sortColumn.value] > b[sortColumn.value]) return sortOrder.value === 'asc' ? 1 : -1;
     if (a[sortColumn.value] < b[sortColumn.value]) return sortOrder.value === 'asc' ? -1 : 1;
     return 0;
@@ -169,16 +176,17 @@ const isChecked = (status) => {
 };
 
 const toggleAllCheckboxes = async (event) => {
+  debugger;
   const isChecked = event.target.checked;
   //TODO: Need to check a case of modified file after staged
   const status = await window.__TAURI__.core.invoke('change_file_status', { repoPath: "../../TEST REPO", relativeFilePath: "*", command: event.target.checked ? "Add All" : "Unstage All", newFilePath: null });//TODO: Find a better solution for the relative file path parameter. Maybe use Some?
-  props.items.forEach(item => {
+  tableData.value.forEach(item => {
     item.selected = isChecked;
   });
 };
 
 const allChecked = computed(() => {
-  return props.items.length > 0 && props.items.every(item => isChecked(item.file_status));
+  return tableData.value.length > 0 && tableData.value.every(item => isChecked(item.file_status));
 });
 </script>
 
