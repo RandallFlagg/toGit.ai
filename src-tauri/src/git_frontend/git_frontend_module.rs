@@ -306,13 +306,35 @@ pub fn get_file_content(repo_path: PathBuf, relative_file_path: PathBuf) -> Resu
 ///
 /// * `Result<Vec<FileMetadata>, GitFrontendError>` - A vector of `FileMetadata` on success, or a `GitFrontendError` on failure.
 #[tauri::command]
+// #[log_macro::log]
 pub fn get_repo_status() -> Result<Vec<FileMetadata>, GitFrontendError> {
-    // Call the internal function to get the repository status
-    match get_repo_status_internal() {
-        Ok(status) => Ok(status),
-        Err(e) => Err(e), // Propagate the error from the internal function
+    let config = CONFIG.get().unwrap().lock().unwrap();
+    let repo_path = config.repo_path_as_pathbuf();
+    debug!("Repo Path: {}", repo_path.to_string_lossy());
+    // Open the repository
+    let repo = Repository::open(repo_path)?;
+    // Get the status options and status entries
+    let statuses = repo.statuses(None)?;
+    // Get the list of changes
+    let mut changes = Vec::new();
+    for entry in statuses.iter() {
+        let mut full_file_path = PathBuf::from(repo_path);
+        full_file_path.push(entry.path().ok_or(git2::Error::from_str("Invalid UTF-8 path"))?);
+        if full_file_path.is_dir() {
+            //TODO: What should happen in case of a dir?
+            continue;
+        }
+        let status = entry.status();
+        // Determine the type of change
+        let change_type = match to_status_string(&status) {
+            Some(value) => value,
+            None => continue,
+        };
+        let file = get_file_metadata(&full_file_path, change_type, repo_path)?;
+        changes.push(file);
     }
-    // get_repo_status_internal(repo_path).map_err(|e| e.to_string())
+
+    Ok(changes)
 }
 
 fn get_repo_tracked() -> Result<Vec<FileMetadata>, GitFrontendError> {
@@ -340,35 +362,6 @@ fn get_repo_tracked() -> Result<Vec<FileMetadata>, GitFrontendError> {
     }
 
     Ok(tracked_files)
-}
-
-fn get_repo_status_internal() -> Result<Vec<FileMetadata>, GitFrontendError> {
-    let config = CONFIG.get().unwrap().lock().unwrap();
-    let repo_path = config.repo_path_as_path();
-    // Open the repository
-    let repo = Repository::open(repo_path)?;
-    // Get the status options and status entries
-    let statuses = repo.statuses(None)?;
-    // Get the list of changes
-    let mut changes = Vec::new();
-    for entry in statuses.iter() {
-        let mut full_file_path = PathBuf::from(repo_path);
-        full_file_path.push(entry.path().ok_or(git2::Error::from_str("Invalid UTF-8 path"))?);
-        if full_file_path.is_dir() {
-            //TODO: What should happen in case of a dir?
-            continue;
-        }
-        let status = entry.status();
-        // Determine the type of change
-        let change_type = match to_status_string(&status) {
-            Some(value) => value,
-            None => continue,
-        };
-        let file = get_file_metadata(&full_file_path, change_type, repo_path)?;
-        changes.push(file);
-    }
-
-    Ok(changes)
 }
 
 fn to_status_string(status: &Status) -> Option<&str> {
@@ -582,6 +575,7 @@ fn generate_file_diff_with_git2(repo_path: PathBuf, relative_file_name: PathBuf)
     Ok(diff_output)
 }
 
+// #[log_macro::log]
 //TODO: Change to init?
 pub fn is_git_repo(path: Option<PathBuf>) -> bool {
     // // Initialize CONFIG if not already initialized
@@ -611,15 +605,16 @@ pub fn is_git_repo(path: Option<PathBuf>) -> bool {
     debug!("The repo path is: {}", repo_path.display());
 
     // Try to open the repository
-    match Repository::discover(repo_path) {
+    match Repository::discover(&repo_path) {
         Ok(repo) => {
             println!("This is a Git repository.");
             // Initialize the global variable if not already initialized
             let mut config = CONFIG.get().unwrap().lock().unwrap();
             debug!("AAA1");
-            config.set_repo_path(repo.path().to_str().unwrap()); //TODO: Do we want this? .expect("Failed to set global variable");
+            config.set_repo_path(repo_path.to_str().expect("Failed to set repo_path global variable"));
             debug!("AAA2");
             println!("Repository path: {}", config.repo_path_as_str());
+            debug!("DONE is_git_repo");
             return true;
         }
         Err(_) => {

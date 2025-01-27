@@ -37,6 +37,7 @@ mime_guess = "*"
 infer = "*"
 binaryornot = "*"
 # lazy_static = "*"
+# log_macro = { path = "../../log_macro" }
 
 [dev-dependencies]
 rustfmt = "*" #2.0.0" # Or the latest version you want to use

@@ -59,7 +59,7 @@ fn main() -> Result<(), GitFrontendError> {
 
     // let args: Vec<String> = env::args().collect();
     // let repo_path = &args[1];
-    // println!("{:?}", main_filesystem(repo_path).map_err(|e| e.to_string()));
+    // println!("{:?}", main_filesystem(None).map_err(|e| e.to_string()));
     main_tauri();
     //Ok("SUCCESS".to_string())
     Ok(())
@@ -122,13 +122,33 @@ fn git_add(repo_path: &Path, file_path: &Path) -> Option<Result<(), GitFrontendE
     None
 }
 
-fn main_filesystem(full_file_path: &str) -> Result<(), GitFrontendError> {
-    match env::current_dir() {
-        Ok(path) => println!("Current working directory: {}", path.display()),
-        Err(e) => println!("Error retrieving current directory: {}", e),
+fn main_filesystem(full_file_path: Option<&str>) -> Result<(), GitFrontendError> {
+    env_logger::init();
+    // Get the command-line arguments
+    #[cfg(not(debug_assertions))]
+    let repo_path = env::args().nth(1).map(PathBuf::from).unwrap_or_else(|| {
+        eprintln!("No repository path provided.");
+        None
+    });
+    
+    // #[cfg(all(debug_assertions, feature = "testing"))]
+    #[cfg(debug_assertions)]
+    //TODO: Remove the following code and the mut from path. For develpment purpose only.
+    let repo_path = PathBuf::from("../../TEST REPO");
+
+    if is_git_repo(Some(repo_path)) {
+        println!("It is a git repo");
+    } else {
+        println!("It is not a git repo");
+        exit(0);
     }
+
+    // match env::current_dir() {
+    //     Ok(path) => println!("Current working directory: {}", path.display()),
+    //     Err(e) => println!("Error retrieving current directory: {}", e),
+    // }
     //let full_file_path = "../TEST REPO";
-    let repo_path = Path::new(full_file_path);
+    // let repo_path = Path::new(full_file_path.unwrap());
     // let file_metadata = get_file_metadata(full_file_path)?;//TODO: If this is to be used it should be imported. currentlly private.
     // println!("RESULT: {:?}", file_metadata); // Print the struct
     let repo_changes = get_repo_status()?;

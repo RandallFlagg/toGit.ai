@@ -1,3 +1,3 @@
 cd src-tauri
-cargo run
+RUST_LOG=debug cargo run
 cd ..

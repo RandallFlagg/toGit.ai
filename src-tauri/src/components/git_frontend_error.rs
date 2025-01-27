@@ -6,17 +6,17 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub(crate) enum GitFrontendError {
-    #[error("IO error")]
+    #[error("IO error: {0}")]
     Io(#[from] io::Error),
-    #[error("Parse error")]
+    #[error("Parse error: {0}")]
     Parse(#[from] chrono::ParseError),
-    #[error("Git2 error")]
-    GitError(git2::Error),
-    #[error("Strip prefix error")]
+    #[error("Git2 error: {0}")]
+    GitError(#[from] git2::Error),
+    #[error("Strip prefix error: {0}")]
     StripPrefixError(#[from] std::path::StripPrefixError),
-    #[error("Invalid repository path")]
+    #[error("Invalid repository path: {0}")]
     InvalidPath(String),
-    #[error("Other error")]
+    #[error("Other error: {0}")]
     Other(String),
 }
 
@@ -46,11 +46,11 @@ impl From<String> for GitFrontendError {
     }
 }
 //TODO: Make the messages show on the frontend
-impl From<git2::Error> for GitFrontendError {
-    fn from(err: git2::Error) -> GitFrontendError {
-        GitFrontendError::Other(err.message().to_string())
-    }
-}
+// impl From<git2::Error> for GitFrontendError {
+//     fn from(err: git2::Error) -> GitFrontendError {
+//         GitFrontendError::Other(err.message().to_string())
+//     }
+// }
 
 // impl fmt::Display for FileError {
 //     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
