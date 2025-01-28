@@ -1,17 +1,25 @@
 <template>
   <div class="container">
     <!-- TODO: Fix position -->
-    <button @click="myFunc">Update Table</button>
+    <button @click="myFunc" class="command-button">Update Table</button>
     <nav class="breadcrumb">
       <ul>
         <li><span>Select:</span></li>
-        <li><a href="#" :class="{ disabled: !navEnabled.tracked }" @click="toggleNav('tracked', 'INDEX')">Tracked</a></li>
-        <li><a href="#" :class="{ disabled: !navEnabled.untracked }" @click="toggleNav('untracked', 'WT')">Untracked</a></li>
+        <li>
+          <a href="#" :class="[{ disabled: !navEnabled.tracked }, 'help']" @click="toggleNav('tracked', 'INDEX')"
+            explanation="Stage all modified and deleted paths. (-a, --all)">
+            Tracked
+          </a>
+        </li>
+        <li><a href="#" :class="{ disabled: !navEnabled.untracked }" @click="toggleNav('untracked', 'WT')">Untracked</a>
+        </li>
         <li><a href="#" :class="{ disabled: !navEnabled.added }" @click="toggleNav('added', 'INDEX')">Added</a></li>
         <li><a href="#" :class="{ disabled: !navEnabled.deleted }" @click="toggleNav('deleted')">Deleted</a></li>
-        <li><a href="#" :class="{ disabled: !navEnabled.modified }" @click="toggleNav('modified', 'INDEX')">Modified</a></li>
+        <li><a href="#" :class="{ disabled: !navEnabled.modified }" @click="toggleNav('modified', 'INDEX')">Modified</a>
+        </li>
         <li><a href="#" :class="{ disabled: !navEnabled.files }" @click="toggleNav('files')">Files</a></li>
-        <li><a href="#" :class="{ disabled: !navEnabled.submodules }" @click="toggleNav('submodules')">Submodules</a></li>
+        <li><a href="#" :class="{ disabled: !navEnabled.submodules }" @click="toggleNav('submodules')">Submodules</a>
+        </li>
       </ul>
     </nav>
     <div class="content">
@@ -64,7 +72,7 @@
       </div>
       <div class="preview-pane">
         <div v-if="selectedItem">
-        <DiffViewer :diffString="diffString" />
+          <DiffViewer :diffString="diffString" />
         </div>
         <div v-else>
           <h3>Select an item to preview</h3>
@@ -98,12 +106,8 @@ const statuses = {
   "CONFLICTED": "Conflicted",
 };
 
-const tableData = ref([]);
-const sortColumn = ref('');
-const sortOrder = ref('asc');
-const selectedItem = ref(null);
-const previewText = ref('');
 const diffString = ref('');
+const explanationVisible = ref(false);
 const navEnabled = ref({
   untracked: false,
   tracked: false,
@@ -113,6 +117,11 @@ const navEnabled = ref({
   files: false,
   submodules: false
 });
+const previewText = ref('');
+const selectedItem = ref(null);
+const sortColumn = ref('');
+const sortOrder = ref('asc');
+const tableData = ref([]);
 
 // Function to fetch data (simulate fetching data from somewhere else)
 const fetchData = async () => {
@@ -136,9 +145,9 @@ const toggleNav = (section, statusPrefix) => {
   //TODO: Use AI to solve this problem
   //TODO: What happens if we delete a file?
   //TODO: Need to check the following scenario: Delete a staged file and load the UI. It get stuck. Why?
-  tableData.value.forEach(item => { 
-      item.selected = item.file_status.startsWith(statusPrefix) || statusPrefix === undefined;
-      changeStatus(item, { target: { checked: item.selected } });
+  tableData.value.forEach(item => {
+    item.selected = item.file_status.startsWith(statusPrefix) || statusPrefix === undefined;
+    changeStatus(item, { target: { checked: item.selected } });
   });
 };
 

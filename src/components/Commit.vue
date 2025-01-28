@@ -357,6 +357,7 @@ If you need to add more items in future queries, we'll continue numbering from h
 
       <button type="submit" class="submit-button" :disabled="!form.message">
         Generate Command
+        <!--TODO: Fix the button style to handle a case it is disabled(currentlly on hover the color changes and the pointer is changing to a hand which is not relevant when disabled) -->
       </button>
     </form>
     <pre id="command-output">{{ commandOutput }}</pre>

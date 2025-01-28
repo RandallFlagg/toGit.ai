@@ -210,3 +210,5 @@ node_modules.windows/
 node_modules.linux/
 DEL/
 /DEL
+# Qudo AI
+history.sqlite
