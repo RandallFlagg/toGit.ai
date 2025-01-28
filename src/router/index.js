@@ -23,6 +23,7 @@ import Commit from '../components/Commit.vue';
 // import Fetch from '../views/Fetch.vue';
 // import Pull from '../views/Pull.vue';
 // import Push from '../views/Push.vue';
+// import Clean from '../views/Clean.vue';
 
 const routes = [
   {
@@ -43,7 +44,8 @@ const routes = [
   {
     path: '/',
     name: 'IndexPage',
-    component: IndexPage
+    // component: IndexPage
+    component: Commit
   },
   {
     path: '/clone',

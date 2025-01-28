@@ -95,6 +95,11 @@
               status
             </router-link> - Show the working tree status
           </li>
+          <li>
+            <router-link to="/clean">
+              status
+            </router-link> - Show the working tree status
+          </li>
         </ul>
       </section>
       <section>
