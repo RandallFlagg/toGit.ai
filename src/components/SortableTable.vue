@@ -24,7 +24,7 @@
     </nav>
     <div class="content">
       <div class="table-pane">
-        <table>
+        <table class="table">
           <thead>
             <tr>
               <th>
@@ -130,25 +130,30 @@ const fetchData = async () => {
 };
 
 onMounted(() => {
-  fetchData();
+  //fetchData();
+  toggleNav('staged', 'INDEX'); //All staged files
 });
 
 // Get current statu from the repo
 // Check in the tableData only tracked files
 // Uncheck and unstage all the files that are not tracked
-const toggleNav = (section, statusPrefix) => {
+const toggleNav = async (section, statusPrefix) => {
   // debugger;
-  //fetchData();
+  // fetchData();
   // TAURI //TODO: Implement the Tauri API to get the status of the files
+  const fetchedData = await window.__TAURI__.core.invoke('get_repo_status', {});
   navEnabled.value[section] = !navEnabled.value[section];
   //TODO: add here reference to section.
   //TODO: Use AI to solve this problem
   //TODO: What happens if we delete a file?
   //TODO: Need to check the following scenario: Delete a staged file and load the UI. It get stuck. Why?
+  debugger;
   tableData.value.forEach(item => {
-    item.selected = item.file_status.startsWith(statusPrefix) || statusPrefix === undefined;
+    item.selected = statusPrefix === undefined || item.file_status.startsWith(statusPrefix);
+    debugger;
     changeStatus(item, { target: { checked: item.selected } });
   });
+  tableData.value = fetchedData;
 };
 
 const sortedItems = computed(() => {
@@ -192,7 +197,7 @@ const isChecked = (status) => {
 const toggleAllCheckboxes = async (event) => {
   const isChecked = event.target.checked;
   //TODO: Need to check a case of modified file after staged
-  const status = await window.__TAURI__.core.invoke('change_file_status', { repoPath: "../../TEST REPO", relativeFilePath: "*", command: event.target.checked ? "Add All" : "Unstage All", newFilePath: null });//TODO: Find a better solution for the relative file path parameter. Maybe use Some?
+  const status = await window.__TAURI__.core.invoke('change_file_status', { relativeFilePath: "*", command: event.target.checked ? "Add All" : "Unstage All", newFilePath: null });//TODO: Find a better solution for the relative file path parameter. Maybe use Some?
   tableData.value.forEach(item => {
     item.selected = isChecked;
   });
@@ -258,27 +263,28 @@ const allChecked = computed(() => {
   border-left: 1px solid #ccc;
 }
 
-table {
+.table {
   width: 100%;
   border-collapse: collapse;
 }
 
-th,
-td {
+.table th,
+.table td {
   padding: 8px;
   text-align: left;
   border-bottom: 1px solid #ddd;
 }
 
-th {
+.table th {
   cursor: pointer;
 }
 
-th input {
+.table th > input { /*TODO: Change to class */
   cursor: default;
 }
 
-input[type="checkbox"] {
+.table th > input[type="checkbox"],
+.table td > input[type="checkbox"] { /*TODO: Change to class */
   width: 20px;
   height: 20px;
 }
