@@ -1,23 +1,29 @@
 {
 	"name": "my-app",
-	"version": "0.1.0",
 	"private": true,
+	"version": "0.1.0",
 	"type": "module",
 	"scripts": {
 		"dev": "vite",
 		"build": "vite build",
-		"preview": "vite preview"
+		"preview": "vite preview",
+		"tauri": "tauri"
 	},
 	"dependencies": {
-		"@tauri-apps/api": "^2.2.0",
+		"vue": "^3.5.13",
+		"@tauri-apps/api": "^2",
 		"core-js": "^3.40.0",
 		"diff2html": "^3.4.51",
-		"vue": "^3.5.13",
+
 		"vue-router": "^4.5.0"
+	},
+	"dependecies not included":{
+	    "@tauri-apps/plugin-opener": "^2"
 	},
 	"devDependencies": {
 		"@babel/core": "^7.26.0",
 		"@babel/eslint-parser": "^7.26.5",
+		"@tauri-apps/cli": "^2",
 		"@typescript-eslint/eslint-plugin": "^8.20.0",
 		"@typescript-eslint/parser": "^8.20.0",
 		"@vitejs/plugin-vue": "^5.2.1",

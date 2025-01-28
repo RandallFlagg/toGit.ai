@@ -75,10 +75,12 @@ pub fn commit(repo_path: &Path) -> Result<String, GitFrontendError> {
 }
 
 #[tauri::command]
-pub fn change_file_status(repo_path: &Path, relative_file_path: &Path, command: &str, new_file_path: Option<&Path>) -> Result<(), GitFrontendError> {
+pub fn change_file_status(relative_file_path: &Path, command: &str, new_file_path: Option<&Path>) -> Result<(), GitFrontendError> {
     println!("AAA1");
+    let config = CONFIG.get().unwrap().lock().unwrap();
+    let repo_path = config.repo_path_as_path();
     let repo = Repository::open(repo_path)?; // Open the repository
-                                             // let repo = Repository::open(repo_path).expect("Failed to open repository"); //TODO: Check which is better here
+    // let repo = Repository::open(repo_path).expect("Failed to open repository"); //TODO: Check which is better here
     println!("AAA2");
     let mut index = repo.index()?; // Get the index (staging area)
                                    // let mut index = repo.index().expect("Failed to get index"); //TODO: Check which is better here

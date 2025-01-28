@@ -1,20 +1,3 @@
-<template>
-  <header>
-    <!-- <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
-
-    <div class="wrapper">
-      <HelloWorld msg="You did it!" />
-    </div> -->
-  </header>
-
-  <main id="app">
-    <!-- <button @click="toggleDebugWindow">Toggle Debug Window</button> -->
-    <DebugWindow ref="debugWindowRef" />
-    <router-view />
-  </main>
-
-</template>
-
 <script setup>
 // import HelloWorld from './components/HelloWorld.vue'
 // import TheWelcome from './components/TheWelcome.vue'
@@ -47,9 +30,23 @@ onBeforeUnmount(() => {
 });
 </script>
 
-<!--
-<script>export default { name: 'App' } </script>
--->
+<template>
+  <header>
+    <!-- <img alt="Vue logo" class="logo" src="./assets/logo.svg" width="125" height="125" />
+
+    <div class="wrapper">
+      <HelloWorld msg="You did it!" />
+    </div> -->
+  </header>
+
+  <main id="app">
+    <!-- <button @click="toggleDebugWindow">Toggle Debug Window</button> -->
+    <DebugWindow ref="debugWindowRef" />
+    <router-view />
+  </main>
+
+</template>
+
 <style scoped>
 /* header {
   line-height: 1.5;

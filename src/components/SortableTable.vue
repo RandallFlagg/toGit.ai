@@ -5,14 +5,13 @@
     <nav class="breadcrumb">
       <ul>
         <li><span>Select:</span></li>
-        <li><a href="#" :class="{ disabled: !navEnabled.tracked }" @click="toggleNav('tracked')">Tracked</a></li>
-        <li><a href="#" :class="{ disabled: !navEnabled.untracked }" @click="toggleNav('untracked')">Untracked</a></li>
-        <li><a href="#" :class="{ disabled: !navEnabled.added }" @click="toggleNav('added')">Added</a></li>
+        <li><a href="#" :class="{ disabled: !navEnabled.tracked }" @click="toggleNav('tracked', 'INDEX')">Tracked</a></li>
+        <li><a href="#" :class="{ disabled: !navEnabled.untracked }" @click="toggleNav('untracked', 'WT')">Untracked</a></li>
+        <li><a href="#" :class="{ disabled: !navEnabled.added }" @click="toggleNav('added', 'INDEX')">Added</a></li>
         <li><a href="#" :class="{ disabled: !navEnabled.deleted }" @click="toggleNav('deleted')">Deleted</a></li>
-        <li><a href="#" :class="{ disabled: !navEnabled.modified }" @click="toggleNav('modified')">Modified</a></li>
+        <li><a href="#" :class="{ disabled: !navEnabled.modified }" @click="toggleNav('modified', 'INDEX')">Modified</a></li>
         <li><a href="#" :class="{ disabled: !navEnabled.files }" @click="toggleNav('files')">Files</a></li>
-        <li><a href="#" :class="{ disabled: !navEnabled.submodules }" @click="toggleNav('submodules')">Submodules</a>
-        </li>
+        <li><a href="#" :class="{ disabled: !navEnabled.submodules }" @click="toggleNav('submodules')">Submodules</a></li>
       </ul>
     </nav>
     <div class="content">
@@ -75,7 +74,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 //TODO: Updated status as the checkbox is being de/selected
 //TODO: Make the preview float to the right? Find a better solution for the preview pane
 //TODO: Implmeent the selection buttons for the differnt files types
@@ -125,15 +124,21 @@ onMounted(() => {
   fetchData();
 });
 
+// Get current statu from the repo
+// Check in the tableData only tracked files
+// Uncheck and unstage all the files that are not tracked
 const toggleNav = (section, statusPrefix) => {
-  debugger;
-  TAURI //TODO: Implement the Tauri API to get the status of the files
+  // debugger;
+  //fetchData();
+  // TAURI //TODO: Implement the Tauri API to get the status of the files
   navEnabled.value[section] = !navEnabled.value[section];
-  tableData.value.forEach(item => {
-    if (item.file_status.startsWith(statusPrefix)) {
-      item.selected = true;
-      changeStatus(item, { target: { checked: true } });
-    }
+  //TODO: add here reference to section.
+  //TODO: Use AI to solve this problem
+  //TODO: What happens if we delete a file?
+  //TODO: Need to check the following scenario: Delete a staged file and load the UI. It get stuck. Why?
+  tableData.value.forEach(item => { 
+      item.selected = item.file_status.startsWith(statusPrefix) || statusPrefix === undefined;
+      changeStatus(item, { target: { checked: item.selected } });
   });
 };
 
@@ -146,6 +151,7 @@ const sortedItems = computed(() => {
 });
 
 const sortTable = (column) => {
+  //TODO: Some column are not sortable. Need to fix this
   if (sortColumn.value === column) {
     sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
   } else {
@@ -166,9 +172,8 @@ const getFileDiff = async (filePath) => {
 };
 
 const changeStatus = async (item, event) => {
-  // debugger
   console.log(item);
-  const status = await window.__TAURI__.core.invoke('change_file_status', { repoPath: "../../TEST REPO", relativeFilePath: item.relative_file_path, command: event.target.checked ? "Add" : "Unstage", newFilePath: null });
+  const status = await window.__TAURI__.core.invoke('change_file_status', { relativeFilePath: item.relative_file_path, command: event.target.checked ? "Add" : "Unstage", newFilePath: null });
 };
 
 const isChecked = (status) => {
@@ -176,7 +181,6 @@ const isChecked = (status) => {
 };
 
 const toggleAllCheckboxes = async (event) => {
-  debugger;
   const isChecked = event.target.checked;
   //TODO: Need to check a case of modified file after staged
   const status = await window.__TAURI__.core.invoke('change_file_status', { repoPath: "../../TEST REPO", relativeFilePath: "*", command: event.target.checked ? "Add All" : "Unstage All", newFilePath: null });//TODO: Find a better solution for the relative file path parameter. Maybe use Some?

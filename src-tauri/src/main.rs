@@ -93,7 +93,7 @@ fn main_change_file_status() -> Result<(), GitFrontendError> {
 fn git_remove(repo_path: &Path, file_path: &Path) -> Option<Result<(), GitFrontendError>> {
     let command = "Remove";
     let new_file_path = Some(Path::new("path/to/your/new_file"));
-    if let Err(e) = change_file_status(repo_path, file_path, command, new_file_path) {
+    if let Err(e) = change_file_status(file_path, command, new_file_path) {
         eprintln!("Error: {}", e);
     }
     match get_repo_status() {
@@ -109,7 +109,7 @@ fn git_remove(repo_path: &Path, file_path: &Path) -> Option<Result<(), GitFronte
 fn git_add(repo_path: &Path, file_path: &Path) -> Option<Result<(), GitFrontendError>> {
     let command = "Add";
     let new_file_path = Some(Path::new("path/to/your/new_file"));
-    if let Err(e) = change_file_status(repo_path, file_path, command, new_file_path) {
+    if let Err(e) = change_file_status(file_path, command, new_file_path) {
         eprintln!("Error: {}", e);
     }
     match get_repo_status() {
@@ -214,6 +214,7 @@ fn main_tauri() {
     }
 
     tauri::Builder::default()
+        // .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             let settings = MenuItemBuilder::new("Settings...").id("settings").accelerator("CmdOrCtrl+,").build(app)?;
 
