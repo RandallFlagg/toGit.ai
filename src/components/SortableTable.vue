@@ -6,7 +6,8 @@
       <ul>
         <li><span>Select:</span></li>
         <li>
-          <a href="#" :class="[{ disabled: !navEnabled.tracked }, 'help']" @click="toggleNav('tracked', 'INDEX')"
+          <a href="#" :class="[{ disabled: !navEnabled.tracked }, 'help']"
+            @click="toggleNav('tracked', trackedStatuses, 'Add Files:Unstage Files', $event)"
             explanation="Stage all modified and deleted paths. (-a, --all)">
             Tracked
           </a>
@@ -57,7 +58,7 @@
             <tr v-for="item in sortedItems" :key="item.id" @click="() => selectItem(item)">
               <td>
                 <input v-model="item.selected" type="checkbox" :checked="isChecked(item.file_status)"
-                  @click.stop="changeStatus(item, $event)">
+                  @click.stop="toggleCheckbox(item, $event)">
               </td>
               <td>{{ item.file_name }}</td>
               <td>{{ item.file_type }}</td>
@@ -105,6 +106,7 @@ const statuses = {
   "IGNORED": "Ignored",
   "CONFLICTED": "Conflicted",
 };
+const trackedStatuses = ["INDEX_NEW", "INDEX_DELETED", "WT_DELETED", "INDEX_MODIFIED", "WT_MODIFIED", "INDEX_RENAMED", "WT_RENAMED"];
 
 const diffString = ref('');
 const explanationVisible = ref(false);
@@ -123,38 +125,10 @@ const sortColumn = ref('');
 const sortOrder = ref('asc');
 const tableData = ref([]);
 
-// Function to fetch data (simulate fetching data from somewhere else)
-const fetchData = async () => {
-  const fetchedData = await window.__TAURI__.core.invoke('get_repo_status', {});
-  tableData.value = fetchedData;
-};
-
 onMounted(() => {
-  //fetchData();
+  //getRepoStatus();
   toggleNav('staged', 'INDEX'); //All staged files
 });
-
-// Get current statu from the repo
-// Check in the tableData only tracked files
-// Uncheck and unstage all the files that are not tracked
-const toggleNav = async (section, statusPrefix) => {
-  // debugger;
-  // fetchData();
-  // TAURI //TODO: Implement the Tauri API to get the status of the files
-  const fetchedData = await window.__TAURI__.core.invoke('get_repo_status', {});
-  navEnabled.value[section] = !navEnabled.value[section];
-  //TODO: add here reference to section.
-  //TODO: Use AI to solve this problem
-  //TODO: What happens if we delete a file?
-  //TODO: Need to check the following scenario: Delete a staged file and load the UI. It get stuck. Why?
-  debugger;
-  tableData.value.forEach(item => {
-    item.selected = statusPrefix === undefined || item.file_status.startsWith(statusPrefix);
-    debugger;
-    changeStatus(item, { target: { checked: item.selected } });
-  });
-  tableData.value = fetchedData;
-};
 
 const sortedItems = computed(() => {
   return [...tableData.value].sort((a, b) => {
@@ -164,7 +138,73 @@ const sortedItems = computed(() => {
   });
 });
 
+const allChecked = computed(() => {
+  return tableData.value.length > 0 && tableData.value.every(item => isChecked(item.file_status));
+});
+
+// Function to fetch data (simulate fetching data from somewhere else)
+const getRepoStatus = async () => {
+  debugLog("Get Repo Status Enter");
+  const fetchedData = await window.__TAURI__.core.invoke('get_repo_status', {});
+  // tableData.value = fetchedData;
+  debugLog(fetchedData);
+  debugLog("Get Repo Status Exit");
+  return fetchedData;
+};
+
+const toggleNav = async (section, statuses, commands, event) => {
+  //TODO: Not loading because there is a deleted file. Need to fix this
+  const fetchedDataBefore = await getRepoStatus();
+  //TODO: add here reference to section.
+  //TODO: Use AI to solve this problem
+  //TODO: What happens if we delete a file?
+  //TODO: Need to check the following scenario: Delete a staged file and load the UI. It get stuck. Why?
+  let changeStatusObject;
+  if (commands) {
+    const command = commands.split(':');
+    // relativeFilePath, command, newFilePath, 
+    changeStatusObject = { newFilesPath: [], command: event.target.checked ? command[0] : command[1] };
+  }
+  // tableData.value.forEach(item => {
+  fetchedDataBefore.forEach(item => {
+    switch (section) {
+      case 'tracked':
+        debugLog("1");
+        if (trackedStatuses.includes(item.file_status)) {
+          changeStatusObject.newFilesPath.push(item.relative_file_path);
+        }
+        //item.selected = trackedStatuses.includes(item.file_status);//TODO: Shouold we use statuses and remove the const?
+        break;
+      case 'untracked':
+        debugLog("2");
+        item.selected = !trackedStatuses.includes(item.file_status);
+        break;
+      case 'deleted':
+        debugLog("3");
+        item.selected = item.file_status === 'DELETED';
+        break;
+      case 'conflicted':
+        debugLog("4");
+        item.selected = item.file_status === 'CONFLICTED';
+        break;
+      case 'staged':
+        debugLog("5");
+        item.selected = item.file_status.startsWith(statuses);
+        break;
+      default:
+        throw "Unknown section: " + section;
+    }
+  });
+  if (section !== "staged") {
+    await changeStatus(changeStatusObject);
+  }
+  const fetchedDataAfter = await getRepoStatus();
+  tableData.value = fetchedDataAfter;
+  navEnabled.value[section] = !navEnabled.value[section];
+};
+
 const sortTable = (column) => {
+  debugger;
   //TODO: Some column are not sortable. Need to fix this
   if (sortColumn.value === column) {
     sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
@@ -175,6 +215,7 @@ const sortTable = (column) => {
 };
 
 const selectItem = (item) => {
+  debugger;
   selectedItem.value = item;
   getFileDiff(item.relative_file_path);
 };
@@ -185,9 +226,22 @@ const getFileDiff = async (filePath) => {
   diffString.value = fileContent.trim(); // TODO: Remove the trim and fix before being sent
 };
 
-const changeStatus = async (item, event) => {
-  console.log(item);
-  const status = await window.__TAURI__.core.invoke('change_file_status', { relativeFilePath: item.relative_file_path, command: event.target.checked ? "Add" : "Unstage", newFilePath: null });
+const toggleCheckbox = async (item, event) => {
+  debugger;
+  const changeStatusObject = { relativeFilePath: item.relative_file_path, command: event.target.checked ? "Add" : "Unstage" };
+  changeStatus(changeStatusObject);
+}
+
+const changeStatus = async (changeStatusObject) => {
+  console.log(changeStatusObject);
+  const result = await window.__TAURI__.core.invoke('change_file_status', {
+    relativeFilePath: changeStatusObject.relativeFilePath || "",
+    command: changeStatusObject.command,
+    newFilePath: changeStatusObject.newFilePath || null,
+    newFilesPath: changeStatusObject.newFilesPath || null
+  });
+  debugLog(result);
+  return result;
 };
 
 const isChecked = (status) => {
@@ -197,15 +251,12 @@ const isChecked = (status) => {
 const toggleAllCheckboxes = async (event) => {
   const isChecked = event.target.checked;
   //TODO: Need to check a case of modified file after staged
-  const status = await window.__TAURI__.core.invoke('change_file_status', { relativeFilePath: "*", command: event.target.checked ? "Add All" : "Unstage All", newFilePath: null });//TODO: Find a better solution for the relative file path parameter. Maybe use Some?
+  // const status = await window.__TAURI__.core.invoke('change_file_status', { relativeFilePath: "*", command: event.target.checked ? "Add All" : "Unstage All", newFilePath: null });//TODO: Find a better solution for the relative file path parameter. Maybe use Some?
+  changeStatus({ relativeFilePath: "*", command: event.target.checked ? "Add All" : "Unstage All" });
   tableData.value.forEach(item => {
     item.selected = isChecked;
   });
 };
-
-const allChecked = computed(() => {
-  return tableData.value.length > 0 && tableData.value.every(item => isChecked(item.file_status));
-});
 </script>
 
 <style scoped>
@@ -279,12 +330,14 @@ const allChecked = computed(() => {
   cursor: pointer;
 }
 
-.table th > input { /*TODO: Change to class */
+.table th>input {
+  /*TODO: Change to class */
   cursor: default;
 }
 
-.table th > input[type="checkbox"],
-.table td > input[type="checkbox"] { /*TODO: Change to class */
+.table th>input[type="checkbox"],
+.table td>input[type="checkbox"] {
+  /*TODO: Change to class */
   width: 20px;
   height: 20px;
 }
