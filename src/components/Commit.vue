@@ -73,8 +73,8 @@ const generateCommand = async () => {
   if (form.value.pathspecFileNul) command += ' --pathspec-file-nul';
   if (form.value.trailer) command += ` --trailer=${form.value.trailer}`;
 
-  commandOutput.value = command;
-  const status = await window.__TAURI__.core.invoke('commit', { repoPath: "../../TEST REPO" });
+  commandOutput.value = "NOT COMMITED: " + command;
+  // const status = await window.__TAURI__.core.invoke('commit', { });
   //TODO: Make the error messages show on the frontend
 };
 </script>
@@ -100,23 +100,12 @@ const generateCommand = async () => {
         <fieldset class="flex-row">
           <legend>Checkbox Options</legend>
 
-          <label title="-a, --all">
-            All
-            <input v-model="form.all" type="checkbox" name="all">
-            <span class="help" title="Stage all modified and deleted paths.">?</span>
-          </label>
-
           <label title="--amend">
             Amend
             <input v-model="form.amend" type="checkbox" name="amend">
             <span class="help" title="Amend the tip of the current branch.">?</span>
           </label>
 
-          <label title="--no-edit">
-            No Edit
-            <input v-model="form.noEdit" type="checkbox" name="noEdit">
-            <span class="help" title="Do not open an editor to modify the commit message.">?</span>
-          </label>
 
           <label title="-s, --signoff">
             Sign Off

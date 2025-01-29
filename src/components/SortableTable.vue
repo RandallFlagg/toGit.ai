@@ -228,12 +228,13 @@ const getFileDiff = async (filePath) => {
 
 const toggleCheckbox = async (item, event) => {
   debugger;
-  const changeStatusObject = { relativeFilePath: item.relative_file_path, command: event.target.checked ? "Add" : "Unstage" };
-  changeStatus(changeStatusObject);
+  const changeStatusObject = { relativeFilePath: item.relative_file_path, command: event.target.checked ? (item.file_status.includes("DELETED") ? "Remove" : "Add") : "Unstage" };
+  await changeStatus(changeStatusObject);
 }
 
 const changeStatus = async (changeStatusObject) => {
   console.log(changeStatusObject);
+  debugLog(changeStatusObject);
   const result = await window.__TAURI__.core.invoke('change_file_status', {
     relativeFilePath: changeStatusObject.relativeFilePath || "",
     command: changeStatusObject.command,
@@ -250,9 +251,8 @@ const isChecked = (status) => {
 
 const toggleAllCheckboxes = async (event) => {
   const isChecked = event.target.checked;
-  //TODO: Need to check a case of modified file after staged
-  // const status = await window.__TAURI__.core.invoke('change_file_status', { relativeFilePath: "*", command: event.target.checked ? "Add All" : "Unstage All", newFilePath: null });//TODO: Find a better solution for the relative file path parameter. Maybe use Some?
-  changeStatus({ relativeFilePath: "*", command: event.target.checked ? "Add All" : "Unstage All" });
+  //TODO: Need to check a case of modified file after staged - Add more descritption
+  await changeStatus({ relativeFilePath: "*", command: event.target.checked ? "Add All" : "Unstage All" });
   tableData.value.forEach(item => {
     item.selected = isChecked;
   });

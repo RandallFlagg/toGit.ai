@@ -3,7 +3,7 @@ use binaryornot::is_binary;
 use chrono::{DateTime, Utc};
 use file_format::FileFormat;
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-use git2::{BranchType, DiffFormat, DiffLineType, DiffOptions, Error, IndexAddOption, IndexEntry, Object, Oid, Repository, Status, StatusOptions};
+use git2::{BranchType, Commit, DiffFormat, DiffLineType, DiffOptions, Error, IndexAddOption, IndexEntry, Object, Oid, Repository, Signature, Status, StatusOptions};
 // use libgit2_sys::{git_repository, git_repository};
 use infer;
 // use lazy_static::lazy_static;
@@ -41,34 +41,60 @@ static FILE_FORMAT_CACHE: LazyLock<Mutex<HashMap<PathBuf, String>>> = LazyLock::
 // }
 
 #[tauri::command]
-pub fn commit(repo_path: &Path) -> Result<String, GitFrontendError> {
+pub fn commit(message: &str, signer_name: &str, signer_email: &str) -> Result<String, GitFrontendError> {
+    let config = CONFIG.get().unwrap().lock().unwrap();
+    let repo_path = config.repo_path_as_path();
+
     println!("AAA1");
+    // Open the repository
     let repo = Repository::open(repo_path)?;
+
     println!("AAA2");
+    // Create a signature for the committer
+    let signature = Signature::now(signer_name, signer_email)?;
+
+    // Get the index and add all files to it
     let mut index = repo.index()?;
     println!("AAA3");
     // Commit the changes
-    let oid = index.write_tree()?;
+
     println!("AAA4");
     let signature = repo.signature()?;
     println!("AAA5");
+
     // Check if there is a HEAD commit
-    let parent_commit = match repo.head() {
-        Ok(head) => Some(head.peel_to_commit()?),
-        Err(_) => None,
-    };
+    let mut parent_commits: Vec<Commit> = Vec::new();
+    if let Ok(head) = repo.head() {
+        // Not the initial commit, get the parent commit
+        let parent_commit = head.peel_to_commit()?;
+        parent_commits.push(parent_commit);
+    }
+    let parent_refs: Vec<&Commit> = parent_commits.iter().collect();
+
+    let signoff_option_enabled = true; //TODO: This should be a parameter
+    let signed_off_message;
+    if signoff_option_enabled {
+        // Append the Signed-off-by line to the commit message
+        signed_off_message = format!("{}\n\nSigned-off-by: {} <{}>", message, signer_name, signer_email);
+    } else {
+        signed_off_message = message.to_string();
+    }
+
     println!("AAA6");
-    let tree = repo.find_tree(oid)?;
+    // Create a tree from the index
+    let tree_oid = index.write_tree()?;
+    let tree = repo.find_tree(tree_oid)?;
     println!("AAA7");
     // Create the commit
-    match parent_commit {
-        Some(parent) => {
-            repo.commit(Some("HEAD"), &signature, &signature, "Commit message", &tree, &[&parent])?;
-        }
-        None => {
-            repo.commit(Some("HEAD"), &signature, &signature, "Initial commit", &tree, &[])?;
-        }
-    }
+    repo.commit(
+        Some("HEAD"),        // Update the HEAD reference
+        &signature,          // Author signature
+        &signature,          // Committer signature
+        &signed_off_message, // Commit message
+        &tree,               // Tree object
+        &parent_refs,        // Parent commit
+    )?;
+
     println!("Changes committed.");
 
     Ok("Commit Success".to_string())
@@ -107,12 +133,12 @@ pub fn change_file_status(relative_file_path: &Path, command: &str, new_file_pat
             index.write()?;
             println!("All the selected files were added to the index.");
         }
-        // "Remove" => {
-        //     // Remove file from the index
-        //     index.remove_path(relative_file_path)?; //TODO: Change on a conflicted file
-        //     index.write()?;
-        //     println!("File removed from the index.");
-        // }
+        "Remove" => {
+            // Remove file from the index
+            index.remove_path(relative_file_path)?; //TODO: Change on a conflicted file
+            index.write()?;
+            println!("File removed from the index.");
+        }
         // "Remove All" => {
         //     // Clear the index
         //     index.clear()?;
@@ -121,7 +147,16 @@ pub fn change_file_status(relative_file_path: &Path, command: &str, new_file_pat
         // }
         "Delete" => {
             // Delete file from the working directory and index
-            fs::remove_file(relative_file_path)?;
+            let path = Path::new(relative_file_path);
+
+            if path.exists() {
+                println!("File exists.");
+                fs::remove_file(relative_file_path)?;
+                println!("Deleted.");
+            } else {
+                println!("File does not exist.");
+            }
+
             index.remove_path(relative_file_path)?;
             index.write()?;
             println!("File deleted from the working directory and index.");
