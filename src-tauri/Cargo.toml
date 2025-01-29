@@ -24,7 +24,7 @@ tauri-plugin-shell = "*" #2.2.0
 serde = { version = "*", features = ["derive"] } #1.0.216
 serde_json = "*" #1.0.134
 git2 = "*" #0.19.2
-libgit2-sys = "*" #0.17.0+1.8.1
+# libgit2-sys = "*" #0.17.0+1.8.1
 home = "*" #0.5.11
 shellexpand = "*" #3.1.0
 log = "*" #0.4
@@ -32,15 +32,17 @@ env_logger = "*" #0.11.6
 chrono = "*" #0.4.39
 prettytable = "*"
 thiserror = "*"
-file-format = "*" 
+file-format = "*" #0.1.0 
 mime_guess = "*"
 infer = "*"
 binaryornot = "*"
 # lazy_static = "*"
-# log_macro = { path = "../../log_macro" }
+# backtrace = "*" #0.3.74
+anyhow = "*"
 
 [dev-dependencies]
 rustfmt = "*" #2.0.0" # Or the latest version you want to use
+# log_macro = { path = "../../log_macro" }
 
 [features]
 debug = []

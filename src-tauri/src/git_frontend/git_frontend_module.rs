@@ -1,13 +1,10 @@
+use anyhow::{Context, Result};
+use binaryornot::is_binary;
 use chrono::{DateTime, Utc};
 use file_format::FileFormat;
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 use git2::{BranchType, DiffFormat, DiffLineType, DiffOptions, Error, IndexAddOption, IndexEntry, Object, Oid, Repository, Status, StatusOptions};
-use tauri::{path, App};
 // use libgit2_sys::{git_repository, git_repository};
-use crate::components::file_metadata::FileMetadata;
-use crate::components::git_frontend_error::GitFrontendError;
-// use crate::REPO_PATH; //TODO: Remove this?
-use binaryornot::is_binary;
 use infer;
 // use lazy_static::lazy_static;
 use log::debug;
@@ -27,7 +24,10 @@ use std::{
     io,
     path::{Path, PathBuf},
 };
+use tauri::{path, App};
 
+use crate::components::file_metadata::FileMetadata;
+use crate::components::git_frontend_error::GitFrontendError;
 use crate::git_frontend::app_config::AppConfig;
 // #[macro_use]
 // extern crate lazy_static;
@@ -75,16 +75,16 @@ pub fn commit(repo_path: &Path) -> Result<String, GitFrontendError> {
 }
 
 #[tauri::command]
-pub fn change_file_status(relative_file_path: &Path, command: &str, new_file_path: Option<&Path>) -> Result<(), GitFrontendError> {
+//TODO: Change all types to be mandatory? Is there a scenario where it would be useful to have an optional path?
+pub fn change_file_status(relative_file_path: &Path, command: &str, new_file_path: Option<&Path>, new_files_path: Option<Vec<&Path>>) -> Result<String, GitFrontendError> {
     println!("AAA1");
     let config = CONFIG.get().unwrap().lock().unwrap();
     let repo_path = config.repo_path_as_path();
     let repo = Repository::open(repo_path)?; // Open the repository
-    // let repo = Repository::open(repo_path).expect("Failed to open repository"); //TODO: Check which is better here
+                                             // let repo = Repository::open(repo_path).expect("Failed to open repository"); //TODO: Check which is better here
     println!("AAA2");
     let mut index = repo.index()?; // Get the index (staging area)
                                    // let mut index = repo.index().expect("Failed to get index"); //TODO: Check which is better here
-
     match command {
         "Add" => {
             println!("Add");
@@ -96,9 +96,16 @@ pub fn change_file_status(relative_file_path: &Path, command: &str, new_file_pat
         "Add All" => {
             println!("Add All");
             // Add all changes in the working directory to the index
-            index.add_all(["*"].iter(), IndexAddOption::DEFAULT, None)?;
+            index.add_all(["*"], IndexAddOption::DEFAULT, None)?;
             index.write()?;
-            println!("All changes added to the index.");
+            println!("All the files were added to the index.");
+        }
+        "Add Files" => {
+            println!("Add All Selected");
+            // Add all changes in the working directory to the index
+            index.add_all(new_files_path.unwrap(), IndexAddOption::DEFAULT, None)?;
+            index.write()?;
+            println!("All the selected files were added to the index.");
         }
         // "Remove" => {
         //     // Remove file from the index
@@ -225,12 +232,19 @@ pub fn change_file_status(relative_file_path: &Path, command: &str, new_file_pat
             index.write()?;
             println!("All files unstaged successfully!");
         }
+        "Unstage Files" => {
+            println!("Add All Selected");
+            // Add all changes in the working directory to the index
+            index.remove_all(new_files_path.unwrap(), None)?;
+            index.write()?;
+            println!("All the selected files were added to the index.");
+        }
         _ => {
             println!("Unknown command."); //TODO: throw an error here
         }
     }
 
-    Ok(()) //TODO: Change return type
+    Ok("Changed file status successfully!".to_string()) //TODO: Change return type
 }
 
 /// Retrieves the content of a file in the specified repository and relative path.
@@ -264,7 +278,7 @@ pub fn change_file_status(relative_file_path: &Path, command: &str, new_file_pat
 #[tauri::command]
 pub fn get_file_content(repo_path: PathBuf, relative_file_path: PathBuf) -> Result<String, GitFrontendError> {
     println!("Relative Repo Path: {}", repo_path.to_string_lossy());
-    let absolute_repo_path = fs::canonicalize(&repo_path).map_err(|e| GitFrontendError::Other(e.to_string()))?; //TODO: Do we need todo this?
+    let absolute_repo_path = fs::canonicalize(&repo_path).map_err(|e| GitFrontendError::OtherError(e.to_string()))?; //TODO: Do we need todo this?
     println!("Absolute Repo Path: {}", absolute_repo_path.to_string_lossy());
     println!("Relative File Path: {}", relative_file_path.to_string_lossy());
     let full_file_path = absolute_repo_path.join(&relative_file_path.strip_prefix("/").unwrap_or(&relative_file_path));
@@ -308,62 +322,51 @@ pub fn get_file_content(repo_path: PathBuf, relative_file_path: PathBuf) -> Resu
 ///
 /// * `Result<Vec<FileMetadata>, GitFrontendError>` - A vector of `FileMetadata` on success, or a `GitFrontendError` on failure.
 #[tauri::command]
+//TODO: Chang to anyhow erro handling to see if it is better than the current soution.
 // #[log_macro::log]
+//pub fn get_repo_status() -> Result<Vec<FileMetadata>, GitFrontendError> {
+//pub fn get_repo_status() -> Result<> {
 pub fn get_repo_status() -> Result<Vec<FileMetadata>, GitFrontendError> {
+    println!("Entering get_repo_status");
     let config = CONFIG.get().unwrap().lock().unwrap();
     let repo_path = config.repo_path_as_pathbuf();
     debug!("Repo Path: {}", repo_path.to_string_lossy());
-    // Open the repository
-    let repo = Repository::open(repo_path)?;
+
+    // Open the repository with context for error
+    let repo = Repository::open(repo_path).context("Failed to open Git repository")?;
+
     // Get the status options and status entries
-    let statuses = repo.statuses(None)?;
+    let statuses = repo.statuses(None).context("Failed to get repository statuses")?;
+
     // Get the list of changes
     let mut changes = Vec::new();
     for entry in statuses.iter() {
         let mut full_file_path = PathBuf::from(repo_path);
-        full_file_path.push(entry.path().ok_or(git2::Error::from_str("Invalid UTF-8 path"))?);
+        full_file_path.push(
+            entry
+                .path()
+                .ok_or_else(|| git2::Error::from_str("Invalid UTF-8 path"))
+                .context("Failed to get entry path")?,
+        );
+
         if full_file_path.is_dir() {
             //TODO: What should happen in case of a dir?
             continue;
         }
+
         let status = entry.status();
         // Determine the type of change
         let change_type = match to_status_string(&status) {
             Some(value) => value,
             None => continue,
         };
-        let file = get_file_metadata(&full_file_path, change_type, repo_path)?;
+
+        let file = get_file_metadata(&full_file_path, change_type, repo_path)
+            .with_context(|| format!("Failed to get file metadata for {:?} with status: {}", full_file_path, change_type))?;
         changes.push(file);
     }
-
+    println!("Exiting get_repo_status");
     Ok(changes)
-}
-
-fn get_repo_tracked() -> Result<Vec<FileMetadata>, GitFrontendError> {
-    let config = CONFIG.get().unwrap().lock().unwrap();
-    let repo_path = config.repo_path_as_path();
-    // Open the repository
-    let repo = Repository::open(repo_path)?;
-    // Get the index (staging area)
-    let index = repo.index().expect("Failed to get index");
-    // Collect all tracked files
-    // let mut tracked_files = Vec::new();
-    // let repo_root = CONFIG.get().unwrap().lock().unwrap().repo_path_as_path();
-
-    let tracked_files = index
-        .iter()
-        .map(|entry| {
-            let path = String::from_utf8(entry.path.clone()).expect("Invalid UTF-8 sequence");
-            get_file_metadata(PathBuf::from(path), "status11", repo_path)
-        })
-        .collect::<Result<Vec<_>, _>>()?;
-
-    // Print the tracked files
-    for file in &tracked_files {
-        println!("{:?}", file);
-    }
-
-    Ok(tracked_files)
 }
 
 fn to_status_string(status: &Status) -> Option<&str> {
@@ -403,13 +406,23 @@ fn show_menu() -> Vec<&'static str> {
 
 fn get_file_metadata<P: AsRef<Path>>(full_file_path: P, status: &str, repo_root: &Path) -> Result<FileMetadata, GitFrontendError> {
     let path_ref: &Path = full_file_path.as_ref();
+    debug!("file0a");
     static ID_COUNTER: AtomicUsize = AtomicUsize::new(1);
+    debug!("file0b");
     let file_name = path_ref.file_name().expect("File not found").to_str().expect("Invalid UTF-8 in file name").to_string();
-    let file = fs::File::open(path_ref)?;
-    let file_format = determine_file_format2(path_ref)?; //TODO: Cache the result of this call
-    let metadata = metadata(path_ref)?;
-    let modified_time = metadata.modified().unwrap_or(SystemTime::now());
-    let modified_at = system_time_to_naive_date_time(modified_time);
+    debug!("file0c");
+    let mut file_format = "".to_string();
+    let mut file_size = "".to_string();
+    if status != "INDEX_DELETED" && status != "WT_DELETED" {
+        debug!("file0d");
+        // Process file
+        file_size = fs::File::open(path_ref)?.metadata()?.len().to_string(); // size: format!("{:.2} KB", file.metadata()?.len() as f64 / 1024.0), // Get size in KB //TODO: Format
+        file_format = determine_file_format2(path_ref)?; //TODO: Cache the result of this call
+                                                         // let metadata = metadata(path_ref)?;
+                                                         // let modified_time = metadata.modified().unwrap_or(SystemTime::now());
+                                                         // let modified_at = system_time_to_naive_date_time(modified_time);
+    }
+    debug!("file0e");
     let file_metadata = FileMetadata {
         id: ID_COUNTER.fetch_add(1, Ordering::SeqCst),
         // change_type: change_type.to_string(),
@@ -419,16 +432,16 @@ fn get_file_metadata<P: AsRef<Path>>(full_file_path: P, status: &str, repo_root:
         file_extension: path_ref.extension().and_then(|ext| ext.to_str()).unwrap_or("").to_string(),
         file_type: file_format,
         file_status: status.to_string(),
-        size: file.metadata()?.len().to_string(), // size: format!("{:.2} KB", file.metadata()?.len() as f64 / 1024.0), // Get size in KB //TODO: Format
-                                                  // created_by: String::from("User A"),
-                                                  // created_at: String::from("2024-01-01T00:00:00Z"),
-                                                  // modified_by: String::from("User B"),
-                                                  // modified_at: modified_at.to_string(),
-                                                  // comments: String::from("No comments"),
-                                                  // preview: "Loading...".to_string(), // Use file content as preview
-                                                  // selected: false,
+        size: file_size,
+        // created_by: String::from("User A"),
+        // created_at: String::from("2024-01-01T00:00:00Z"),
+        // modified_by: String::from("User B"),
+        // modified_at: modified_at.to_string(),
+        // comments: String::from("No comments"),
+        // preview: "Loading...".to_string(), // Use file content as preview
+        // selected: false,
     };
-
+    debug!("file0f");
     Ok(file_metadata)
 }
 
@@ -627,6 +640,36 @@ pub fn is_git_repo(path: Option<PathBuf>) -> bool {
     }
 }
 
+//TODO: Functions from here can be deleted?
+/*
+fn get_repo_tracked() -> Result<Vec<FileMetadata>, GitFrontendError> {
+    let config = CONFIG.get().unwrap().lock().unwrap();
+    let repo_path = config.repo_path_as_path();
+    // Open the repository
+    let repo = Repository::open(repo_path)?;
+    // Get the index (staging area)
+    let index = repo.index().expect("Failed to get index");
+    // Collect all tracked files
+    // let mut tracked_files = Vec::new();
+    // let repo_root = CONFIG.get().unwrap().lock().unwrap().repo_path_as_path();
+
+    let tracked_files = index
+        .iter()
+        .map(|entry| {
+            let path = String::from_utf8(entry.path.clone()).expect("Invalid UTF-8 sequence");
+            get_file_metadata(PathBuf::from(path), "status11", repo_path)
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+
+    // Print the tracked files
+    for file in &tracked_files {
+        println!("{:?}", file);
+    }
+
+    Ok(tracked_files)
+}
+
+
 //fn use_library(settings: State<'_, Mutex<Settings>>) {
 fn use_library() {
     // let config = CONFIG.get().unwrap().lock().unwrap();
@@ -640,3 +683,4 @@ fn use_library() {
     // }
     todo!("What do we want to do here?")
 }
+*/

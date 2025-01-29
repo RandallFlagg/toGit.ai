@@ -11,7 +11,7 @@ pub(crate) struct FileMetadata {
     pub file_extension: String,
     pub file_type: String,
     pub file_status: String,
-    pub size: String,
+    pub size: String, //TODO: Change to number type?
     // pub created_by: String,
     // pub created_at: String, //rfc_339
     // pub modified_by: String,

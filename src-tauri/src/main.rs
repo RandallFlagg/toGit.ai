@@ -4,6 +4,7 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use anyhow::{Context, Result};
 use git2::{Error, Repository};
 // https://confidence.sh/blog/rust-module-system-explained/
 use log::{debug, info};
@@ -32,14 +33,19 @@ mod git_frontend;
 mod logic;
 use crate::components::file_metadata::FileMetadata;
 use crate::components::git_frontend_error::GitFrontendError;
+use crate::git_frontend::app_config::AppConfig;
 use crate::git_frontend::git_frontend_module::change_file_status;
 use crate::git_frontend::git_frontend_module::commit;
 use crate::git_frontend::git_frontend_module::get_file_content;
 use crate::git_frontend::git_frontend_module::get_repo_status;
 use crate::git_frontend::git_frontend_module::is_git_repo;
-use crate::git_frontend::app_config::AppConfig;
 
 fn main() -> Result<(), GitFrontendError> {
+    // Enable backtrace support
+    std::env::set_var("RUST_LIB_BACKTRACE", "1");
+    env_logger::init();
+
+    //MISC. RUN
     // match generate_diff("../../TEST REPO", "a") {//TEST1/b.txt .a.kate-swp
     //     Ok(diff) => println!("{}", diff),
     //     Err(e) => eprintln!("Error generating diff: {}", e),
@@ -59,8 +65,43 @@ fn main() -> Result<(), GitFrontendError> {
 
     // let args: Vec<String> = env::args().collect();
     // let repo_path = &args[1];
+
+    //main_filesystem RUN
+    // if let Err(err) = main_filesystem(None) {
+    //     eprintln!("Error: {:?}", err);
+
+    //     // Print backtrace if available
+    //     if let GitFrontendError::AnyhowError(e) = &err {
+    //         eprintln!("Backtrace: {:?}", e.backtrace());
+    //     } else {
+    //         eprintln!("No backtrace available.");
+    //     }
+    //     // Check for and print backtrace if available
+    //     // match err {
+    //     //     GitFrontendError::AnyhowError(ref e) => {
+    //     //         eprintln!("Backtrace: {:?}", e.backtrace());
+    //     //     }
+    //     //     _ => {
+    //     //         eprintln!("No backtrace available.");
+    //     //     }
+    //     // }
+    // }
+
     // println!("{:?}", main_filesystem(None).map_err(|e| e.to_string()));
+
+    //main_tauri RUN
+    // if let Err(err) = main_tauri() {
+    //     eprintln!("Error: {:?}", err);
+
+    //     // Print backtrace if available
+    //     if let GitFrontendError::AnyhowError(e) = &err {
+    //         eprintln!("Backtrace: {:?}", e.backtrace());
+    //     } else {
+    //         eprintln!("No backtrace available.");
+    //     }
+    // }
     main_tauri();
+
     //Ok("SUCCESS".to_string())
     Ok(())
 }
@@ -93,7 +134,7 @@ fn main_change_file_status() -> Result<(), GitFrontendError> {
 fn git_remove(repo_path: &Path, file_path: &Path) -> Option<Result<(), GitFrontendError>> {
     let command = "Remove";
     let new_file_path = Some(Path::new("path/to/your/new_file"));
-    if let Err(e) = change_file_status(file_path, command, new_file_path) {
+    if let Err(e) = change_file_status(file_path, command, new_file_path, None) {
         eprintln!("Error: {}", e);
     }
     match get_repo_status() {
@@ -109,7 +150,7 @@ fn git_remove(repo_path: &Path, file_path: &Path) -> Option<Result<(), GitFronte
 fn git_add(repo_path: &Path, file_path: &Path) -> Option<Result<(), GitFrontendError>> {
     let command = "Add";
     let new_file_path = Some(Path::new("path/to/your/new_file"));
-    if let Err(e) = change_file_status(file_path, command, new_file_path) {
+    if let Err(e) = change_file_status(file_path, command, new_file_path, None) {
         eprintln!("Error: {}", e);
     }
     match get_repo_status() {
@@ -123,14 +164,13 @@ fn git_add(repo_path: &Path, file_path: &Path) -> Option<Result<(), GitFrontendE
 }
 
 fn main_filesystem(full_file_path: Option<&str>) -> Result<(), GitFrontendError> {
-    env_logger::init();
     // Get the command-line arguments
     #[cfg(not(debug_assertions))]
     let repo_path = env::args().nth(1).map(PathBuf::from).unwrap_or_else(|| {
         eprintln!("No repository path provided.");
         None
     });
-    
+
     // #[cfg(all(debug_assertions, feature = "testing"))]
     #[cfg(debug_assertions)]
     //TODO: Remove the following code and the mut from path. For develpment purpose only.
@@ -193,14 +233,13 @@ fn main_filesystem(full_file_path: Option<&str>) -> Result<(), GitFrontendError>
 
 //TODO: Add an option to send the repo path from the command line
 fn main_tauri() {
-    env_logger::init();
     // Get the command-line arguments
     #[cfg(not(debug_assertions))]
     let repo_path = env::args().nth(1).map(PathBuf::from).unwrap_or_else(|| {
         eprintln!("No repository path provided.");
         None
     });
-    
+
     // #[cfg(all(debug_assertions, feature = "testing"))]
     #[cfg(debug_assertions)]
     //TODO: Remove the following code and the mut from path. For develpment purpose only.
@@ -251,6 +290,7 @@ fn main_tauri() {
                 }
             });
 
+            // Ok("Success".to_string())
             Ok(())
         })
         // User Settings: Store user preferences or settings that can be accessed and modified throughout the application.

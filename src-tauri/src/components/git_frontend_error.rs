@@ -1,75 +1,43 @@
 use chrono::ParseError;
-use tauri::ipc::InvokeError;
-// use tauri::ipc::InvokeError;
 use std::{fmt, io, path::StripPrefixError};
+use tauri::ipc::InvokeError;
 use thiserror::Error;
 
+use anyhow::{Context, Result};
+use git2::Repository;
+use std::fs::File;
+
 #[derive(Error, Debug)]
+// #[derive(Debug)]
 pub(crate) enum GitFrontendError {
     #[error("IO error: {0}")]
-    Io(#[from] io::Error),
+    IoError(#[from] io::Error),
+
     #[error("Parse error: {0}")]
-    Parse(#[from] chrono::ParseError),
+    ParseError(#[from] chrono::ParseError),
+
     #[error("Git2 error: {0}")]
     GitError(#[from] git2::Error),
+
     #[error("Strip prefix error: {0}")]
     StripPrefixError(#[from] std::path::StripPrefixError),
-    #[error("Invalid repository path: {0}")]
-    InvalidPath(String),
+
+    // #[error("Invalid repository path: {0}")]//TODO: Check why we have this and remove if not needed
+    // InvalidPathError(String),
+
+    // #[error("BackTrace: {0}")] //TODO: Probably can be removed
+    // BackTrace(#[from] backtrace::Backtrace),
+
+    #[error("Anyhow error: {0}")]
+    AnyhowError(#[from] anyhow::Error),
+
     #[error("Other error: {0}")]
-    Other(String),
+    OtherError(String),
 }
 
-// impl fmt::Display for GitFrontendError {
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         match self {
-//             GitFrontendError::Io(err) => write!(f, "IO error: {}", err),
-//             GitFrontendError::Parse(err) => write!(f, "Parse error: {}", err),
-//             GitFrontendError::Git2(err) => write!(f, "Git2 error: {}", err),
-//             GitFrontendError::InvalidPath(msg) => write!(f, "Invalid path: {}", msg),
-//             GitFrontendError::Other(msg) => write!(f, "Other error: {}", msg),
-//         }
-//     }
-// }
-
-impl Into<InvokeError> for GitFrontendError {
-    fn into(self) -> InvokeError {
-        InvokeError::from(self.to_string())
-        // Ok("Error")
-        //"Error".to_string()
+// Implement `Into<InvokeError>` for `GitFrontendError`
+impl From<GitFrontendError> for InvokeError {
+    fn from(err: GitFrontendError) -> InvokeError {
+        InvokeError::from(err.to_string())
     }
 }
-
-impl From<String> for GitFrontendError {
-    fn from(err: String) -> GitFrontendError {
-        GitFrontendError::Other(err)
-    }
-}
-//TODO: Make the messages show on the frontend
-// impl From<git2::Error> for GitFrontendError {
-//     fn from(err: git2::Error) -> GitFrontendError {
-//         GitFrontendError::Other(err.message().to_string())
-//     }
-// }
-
-// impl fmt::Display for FileError {
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         match self {
-//             FileError::Io(err) => write!(f, "I/O Error: {}", err),
-//             FileError::Parse(err) => write!(f, "Parse Error: {}", err),
-//             FileError::Other(err) => write!(f, "Other Error: {}", err),
-//         }
-//     }
-// }
-
-// impl From<io::Error> for FileError {
-//     fn from(err: io::Error) -> FileError {
-//         FileError::Io(err)
-//     }
-// }
-
-// impl From<ParseError> for FileError {
-//     fn from(err: ParseError) -> FileError {
-//         FileError::Parse(err)
-//     }
-// }
