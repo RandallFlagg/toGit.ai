@@ -94,6 +94,25 @@ const generateCommand = async () => {
           placeholder="<message>" required />
       </label>
       <details>
+        <summary>Options not in use</summary>
+        <span>-q --quiet</span>
+        <br />
+        <span>--no-edit</span>
+        <br />
+        <span>--allow-empty</span>
+        <br />
+        <span>--allow-empty-message</span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <br />
+        <label title="--dry-run">
+          Dry Run
+          <input v-model="form.dryRun" type="checkbox" name="dryRun">
+          <span class="help" title="Show what would be committed without actually committing.">?</span>
+        </label>
+      </details>
+      <details>
         <summary>Additional Options</summary>
 
         <!-- Checkbox Inputs -->
@@ -106,29 +125,10 @@ const generateCommand = async () => {
             <span class="help" title="Amend the tip of the current branch.">?</span>
           </label>
 
-
           <label title="-s, --signoff">
             Sign Off
             <input v-model="form.signoff" type="checkbox" name="signoff">
             <span class="help" title="Add Signed-off-by line at the end of the commit message.">?</span>
-          </label>
-
-          <label title="-q, --quiet">
-            Quiet
-            <input v-model="form.quiet" type="checkbox" name="quiet">
-            <span class="help" title="Suppress commit summary message.">?</span>
-          </label>
-
-          <label title="--dry-run">
-            Dry Run
-            <input v-model="form.dryRun" type="checkbox" name="dryRun">
-            <span class="help" title="Show what would be committed without actually committing.">?</span>
-          </label>
-
-          <label title="--allow-empty">
-            Allow Empty
-            <input v-model="form.allowEmpty" type="checkbox" name="allowEmpty" disabled>
-            <span class="help" title="Create a commit even if there are no changes.">?</span>
           </label>
 
           <label title="-a, --interactive, --patch">
@@ -143,22 +143,17 @@ const generateCommand = async () => {
             <span class="help" title="Show unified diff of all file changes.">?</span>
           </label>
 
-          <label title="--allow-empty-message">
-            Allow Empty Message
-            <input v-model="form.allowEmptyMessage" type="checkbox" name="allowEmptyMessage">
-            <span class="help" title="Create a commit with an empty commit message.">?</span>
-          </label>
-
           <label title="--no-verify">
             No Verify
             <input v-model="form.noVerify" type="checkbox" name="noVerify">
             <span class="help" title="Bypass pre-commit and commit-msg hooks.">?</span>
           </label>
 
-          <label title="-e">
+          <label title="-e --edit">
             Edit Message
             <input v-model="form.editMessage" type="checkbox" name="editMessage">
-            <span class="help" title="Edit the commit message before committing.">?</span>
+            <span class="help"
+              title="The message taken from file with -F, command line with -m, and from commit object with -C are usually used as the commit log message unmodified. This option lets you further edit the message taken from these sources.">?</span>
           </label>
 
           <label title="--status">
@@ -170,7 +165,8 @@ const generateCommand = async () => {
           <label title="--pathspec-file-nul">
             Pathspec File Null
             <input v-model="form.pathspecFileNul" type="checkbox" name="pathspecFileNul">
-            <span class="help" title="Pathspec elements are separated with NUL character.">?</span>
+            <span class="help"
+              title="Only meaningful with --pathspec-from-file. Pathspec elements are separated with NUL character and all other characters are taken literally (including newlines and quotes).">?</span>
           </label>
         </fieldset>
         <!-- Amend Options -->
@@ -248,7 +244,7 @@ const generateCommand = async () => {
             <span class="help" title="Create a fixup commit.">?</span>
           </label>
 
-          <label title="-F <file>">
+          <label title="-F <file> --file=<file>">
             File
             <input v-model="form.file" type="text" name="file" placeholder="<file>">
             <span class="help" title="Take commit message from file.">?</span>
