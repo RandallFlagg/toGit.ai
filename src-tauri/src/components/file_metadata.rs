@@ -1,7 +1,7 @@
-use chrono::{DateTime, Utc};
+// use chrono::{DateTime, Utc};
 use serde::Serialize;
-use serde_json::Value;
-use std::collections::HashMap;
+// use serde_json::Value;
+// use std::collections::HashMap;
 
 //TODO: Should all the String be changed to &str?
 #[derive(Debug, Serialize)]
@@ -23,11 +23,12 @@ pub(crate) struct FileMetadata {
     pub relative_file_path: String,
 }
 
-impl FileMetadata {
-    fn to_(&self) -> Vec<(String, String)> {
-        let json_value = serde_json::to_value(self).unwrap();
-        let json_object = json_value.as_object().unwrap();
+//TODO: Delete this method? What does it do?
+// impl FileMetadata {
+//     fn to_(&self) -> Vec<(String, String)> {
+//         let json_value = serde_json::to_value(self).unwrap();
+//         let json_object = json_value.as_object().unwrap();
 
-        json_object.iter().map(|(k, v)| (k.clone(), v.to_string())).collect()
-    }
-}
+//         json_object.iter().map(|(k, v)| (k.clone(), v.to_string())).collect()
+//     }
+// }

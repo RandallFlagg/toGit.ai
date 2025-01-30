@@ -4,34 +4,30 @@
 // Prevents additional console window on Windows in release, DO NOT REMOVE!!
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use anyhow::{Context, Result};
-use git2::{Error, Repository};
+use anyhow::Result;
 // https://confidence.sh/blog/rust-module-system-explained/
+// use chrono::{DateTime, NaiveDate, NaiveDateTime, ParseError, Utc};
 use log::{debug, info};
-use mime_guess::from_path;
-use std::cell::OnceCell;
+// use mime_guess::from_path;
+// use std::cell::OnceCell;
 use std::env;
+// use file_format::{FileFormat, Kind};
+// use std::fs::{File, metadata};
 use std::path::{Path, PathBuf};
 use std::process::exit;
-use std::sync::OnceLock;
-use std::time::SystemTime;
+// use std::string::ParseError;
+// use std::sync::OnceLock;
+// use std::time::SystemTime;
 use tauri::{generate_context, State};
 use tauri::{
     menu::{AboutMetadata, Menu, MenuBuilder, MenuItemBuilder, SubmenuBuilder},
     Manager,
 };
-// use std::string::ParseError;
-use chrono::{DateTime, NaiveDate, NaiveDateTime, ParseError, Utc};
-use file_format::{FileFormat, Kind};
-use std::fs::File;
-use std::fs::{self, metadata};
-use std::io::{self, Read};
-use thiserror::Error;
 
 mod components;
 mod git_frontend;
 mod logic;
-use crate::components::file_metadata::FileMetadata;
+// use crate::components::file_metadata::FileMetadata;
 use crate::components::git_frontend_error::GitFrontendError;
 use crate::git_frontend::app_config::AppConfig;
 use crate::git_frontend::git_frontend_module::change_file_status;
@@ -44,7 +40,7 @@ fn main() -> Result<(), GitFrontendError> {
     // Enable backtrace support
     std::env::set_var("RUST_LIB_BACKTRACE", "1");
     env_logger::init();
-
+    debug!("main start");
     //MISC. RUN
     // match generate_diff("../../TEST REPO", "a") {//TEST1/b.txt .a.kate-swp
     //     Ok(diff) => println!("{}", diff),

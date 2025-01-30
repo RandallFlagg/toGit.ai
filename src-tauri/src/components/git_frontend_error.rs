@@ -1,11 +1,11 @@
-use chrono::ParseError;
-use std::{fmt, io, path::StripPrefixError};
+// use chrono::ParseError;
+use std::{io, path::StripPrefixError};
 use tauri::ipc::InvokeError;
 use thiserror::Error;
 
-use anyhow::{Context, Result};
-use git2::Repository;
-use std::fs::File;
+// use anyhow::{Context, Result, Error};
+// use git2::Repository;
+// use std::fs::File;
 
 #[derive(Error, Debug)]
 // #[derive(Debug)]
@@ -13,8 +13,8 @@ pub(crate) enum GitFrontendError {
     #[error("IO error: {0}")]
     IoError(#[from] io::Error),
 
-    #[error("Parse error: {0}")]
-    ParseError(#[from] chrono::ParseError),
+    // #[error("Parse error: {0}")]
+    // ParseError(#[from] chrono::ParseError),
 
     #[error("Git2 error: {0}")]
     GitError(#[from] git2::Error),

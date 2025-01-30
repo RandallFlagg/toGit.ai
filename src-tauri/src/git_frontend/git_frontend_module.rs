@@ -1,25 +1,25 @@
 use anyhow::{Context, Result};
 use binaryornot::is_binary;
-use chrono::{DateTime, Utc};
-use file_format::FileFormat;
+// use chrono::{DateTime, Utc};
+// use file_format::FileFormat;
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-use git2::{BranchType, Commit, DiffFormat, DiffLineType, DiffOptions, Error, IndexAddOption, IndexEntry, Object, Oid, Repository, Signature, Status, StatusOptions};
+use git2::{Commit, DiffFormat, DiffOptions, Error, IndexAddOption, Repository, Signature, Status};
 // use libgit2_sys::{git_repository, git_repository};
 use infer;
 // use lazy_static::lazy_static;
 use log::debug;
-use mime_guess::from_path;
-use serde::Serialize;
-use shellexpand;
-use std::cell::{OnceCell, RefCell};
-use std::collections::{HashMap, HashSet};
+// use mime_guess::from_path;
+// use serde::Serialize;
+// use shellexpand;
+// use std::cell::{OnceCell, RefCell};
+use std::collections::HashMap;
 use std::env;
-use std::fs::{self, metadata, File};
+use std::fs::{self, File};
 use std::io::Read;
-use std::ops::ControlFlow;
+// use std::ops::ControlFlow;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{LazyLock, Mutex, OnceLock};
-use std::time::SystemTime;
+// use std::time::SystemTime;
 use std::{
     io,
     path::{Path, PathBuf},
@@ -49,15 +49,16 @@ pub fn commit(message: &str, signer_name: &str, signer_email: &str) -> Result<St
     // Open the repository
     let repo = Repository::open(repo_path)?;
 
-    println!("AAA2");
-    // Create a signature for the committer
-    let signature = Signature::now(signer_name, signer_email)?;
-
+    
     // Get the index and add all files to it
     let mut index = repo.index()?;
     println!("AAA3");
     // Commit the changes
-
+    
+    println!("AAA2");
+    //TODO: handle signature logic
+    // Create a signature for the committer
+    let signature = Signature::now(signer_name, signer_email)?;
     println!("AAA4");
     let signature = repo.signature()?;
     println!("AAA5");
@@ -452,10 +453,10 @@ fn get_file_metadata<P: AsRef<Path>>(full_file_path: P, status: &str, repo_root:
         debug!("file0d");
         // Process file
         file_size = fs::File::open(path_ref)?.metadata()?.len().to_string(); // size: format!("{:.2} KB", file.metadata()?.len() as f64 / 1024.0), // Get size in KB //TODO: Format
-        file_format = determine_file_format2(path_ref)?; //TODO: Cache the result of this call
-                                                         // let metadata = metadata(path_ref)?;
-                                                         // let modified_time = metadata.modified().unwrap_or(SystemTime::now());
-                                                         // let modified_at = system_time_to_naive_date_time(modified_time);
+        file_format = determine_file_format(path_ref)?; //TODO: Cache the result of this call
+                                                        // let metadata = metadata(path_ref)?;
+                                                        // let modified_time = metadata.modified().unwrap_or(SystemTime::now());
+                                                        // let modified_at = system_time_to_naive_date_time(modified_time);
     }
     debug!("file0e");
     let file_metadata = FileMetadata {
@@ -480,36 +481,36 @@ fn get_file_metadata<P: AsRef<Path>>(full_file_path: P, status: &str, repo_root:
     Ok(file_metadata)
 }
 
-fn determine_file_format(file_path: &Path) -> io::Result<String> {
-    determine_file_format1(file_path)
+fn determine_file_format(file_path: &Path) -> Result<String, GitFrontendError> {
+    determine_file_format2(file_path)
 }
 
 //Using FileFormat and MimeGuess
-fn determine_file_format1(file_path: &Path) -> io::Result<String> {
-    let mut file = File::open(file_path)?;
-    let mut buffer = vec![0; 512]; // Define a buffer with 512 bytes
-    let bytes_read = file.read(&mut buffer)?;
-    if bytes_read == 0 {
-        //TODO: Decide how we want to handle this
-        return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "File is empty or could not be read"));
-    }
-    buffer.truncate(bytes_read);
+fn determine_file_format1(file_path: &Path) { //-> io::Result<String> {
+                                              // let mut file = File::open(file_path)?;
+                                              // let mut buffer = vec![0; 512]; // Define a buffer with 512 bytes
+                                              // let bytes_read = file.read(&mut buffer)?;
+                                              // if bytes_read == 0 {
+                                              //     //TODO: Decide how we want to handle this
+                                              //     return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "File is empty or could not be read"));
+                                              // }
+                                              // buffer.truncate(bytes_read);
 
-    let file_format;
+    // let file_format;
 
-    // First, try to determine the file format by its content
-    let fmt = FileFormat::from_bytes(&buffer);
-    let name = fmt.name().to_string();
-    if name != "Empty" {
-        file_format = name;
-    } else {
-        // Fallback to using mime_guess based on the file extension
-        file_format = mime_guess::from_path(file_path)
-            .first()
-            .map(|mime| mime.to_string())
-            .unwrap_or_else(|| "Unknown file type".to_string());
-    }
-    Ok(file_format)
+    // // First, try to determine the file format by its content
+    // let fmt = FileFormat::from_bytes(&buffer);
+    // let name = fmt.name().to_string();
+    // if name != "Empty" {
+    // file_format = name;
+    // } else {
+    //     // Fallback to using mime_guess based on the file extension
+    //     file_format = mime_guess::from_path(file_path)
+    //         .first()
+    //         .map(|mime| mime.to_string())
+    //         .unwrap_or_else(|| "Unknown file type".to_string());
+    // }
+    // Ok(file_format)
 }
 
 //Caching
@@ -546,40 +547,14 @@ fn determine_file_format3(file_path: &Path) -> io::Result<String> {
     Ok("unknown".to_string())
 }
 
-fn system_time_to_naive_date_time(st: SystemTime) -> DateTime<Utc> {
-    let datetime: DateTime<Utc> = st.into();
-    DateTime::from_timestamp(datetime.timestamp(), datetime.timestamp_subsec_nanos()).unwrap()
-}
+// fn system_time_to_naive_date_time(st: SystemTime) -> DateTime<Utc> {
+//     let datetime: DateTime<Utc> = st.into();
+//     DateTime::from_timestamp(datetime.timestamp(), datetime.timestamp_subsec_nanos()).unwrap()
+// }
 
 /// Generates a diff string between a file in the working tree and the index.
 /// If the file is not in the working tree, it returns the diff against an empty file.
 /// The file name should be relative to the repo path
-fn generate_diff(repo_path: &str, full_file_path: &PathBuf) -> Result<String, Error> {
-    // Open the repository
-    let repo = Repository::open(repo_path)?;
-
-    // Get the index
-    let index = repo.index()?;
-
-    // Get the OID of the file in the index
-    let oid = index.get_path(Path::new(full_file_path), 0);
-    let oid = index.get_path(full_file_path.as_path(), 0).ok_or_else(|| Error::from_str("File not found in index"))?.id;
-
-    // Read the file content from the index
-    let blob = repo.find_blob(oid)?;
-    let index_content = String::from_utf8_lossy(blob.content());
-
-    // Read the file content from the working tree
-    let working_tree_content = fs::read_to_string(Path::new(repo_path).join(full_file_path)).unwrap_or_else(|_| String::new());
-
-    // Generate the diff
-    // let diff = generate_diff_with_git2(&repo, full_file_path)?;
-    let diff = "DUMMY".to_string();
-
-    // Return the diff
-    Ok(diff)
-}
-
 fn generate_file_diff_with_git2(repo_path: PathBuf, relative_file_name: PathBuf) -> Result<String, Error> {
     println!("Working with File: {}", relative_file_name.to_string_lossy());
     println!("Working with Repo: {}", repo_path.to_string_lossy());
@@ -680,8 +655,6 @@ pub fn is_git_repo(path: Option<PathBuf>) -> bool {
 fn trigger_event(app: AppHandle) {
     app.emit("custom-event", &"Hello from Rust!").unwrap();
 }
-
-
 
 //TODO: Functions from here can be deleted?
 /*
