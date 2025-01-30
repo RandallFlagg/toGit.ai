@@ -1,7 +1,7 @@
 <template>
   <div class="container">
     <!-- TODO: Fix position -->
-    <button @click="myFunc" class="command-button">Update Table</button>
+    <button type="button" @click="updateTable" class="command-button">Update Table</button>
     <nav class="breadcrumb">
       <ul>
         <li><span>Select:</span></li>
@@ -73,6 +73,7 @@
       </div>
       <div class="preview-pane">
         <div v-if="selectedItem">
+          <!-- TODO: Use vue-diff instead of diff2html? -->
           <DiffViewer :diffString="diffString" />
         </div>
         <div v-else>
@@ -126,7 +127,6 @@ const sortOrder = ref('asc');
 const tableData = ref([]);
 
 onMounted(() => {
-  //getRepoStatus();
   toggleNav('staged', 'INDEX'); //All staged files
 });
 
@@ -146,11 +146,15 @@ const allChecked = computed(() => {
 const getRepoStatus = async () => {
   debugLog("Get Repo Status Enter");
   const fetchedData = await window.__TAURI__.core.invoke('get_repo_status', {});
-  // tableData.value = fetchedData;
   debugLog(fetchedData);
   debugLog("Get Repo Status Exit");
   return fetchedData;
 };
+
+const updateTable = async () => {
+  const fetchedDataAfter = await getRepoStatus();
+  tableData.value = fetchedDataAfter;
+}
 
 const toggleNav = async (section, statuses, commands, event) => {
   //TODO: Not loading because there is a deleted file. Need to fix this
@@ -198,8 +202,7 @@ const toggleNav = async (section, statuses, commands, event) => {
   if (section !== "staged") {
     await changeStatus(changeStatusObject);
   }
-  const fetchedDataAfter = await getRepoStatus();
-  tableData.value = fetchedDataAfter;
+  updateTable();
   navEnabled.value[section] = !navEnabled.value[section];
 };
 

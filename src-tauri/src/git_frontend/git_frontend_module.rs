@@ -24,7 +24,7 @@ use std::{
     io,
     path::{Path, PathBuf},
 };
-use tauri::{path, App};
+use tauri::{path, App, AppHandle, Emitter};
 
 use crate::components::file_metadata::FileMetadata;
 use crate::components::git_frontend_error::GitFrontendError;
@@ -674,6 +674,14 @@ pub fn is_git_repo(path: Option<PathBuf>) -> bool {
         }
     }
 }
+
+//TODO: This is for file watcher. In logic moduile we have more code
+#[tauri::command]
+fn trigger_event(app: AppHandle) {
+    app.emit("custom-event", &"Hello from Rust!").unwrap();
+}
+
+
 
 //TODO: Functions from here can be deleted?
 /*

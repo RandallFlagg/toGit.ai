@@ -8,7 +8,7 @@ const debugWindowRef = ref(null);
 
 const toggleDebugWindow = () => {
   // if (debugWindowRef.value) {
-    debugWindowRef.value.toggleVisibility();
+  debugWindowRef.value.toggleVisibility();
   // }
 };
 
@@ -21,8 +21,12 @@ const handleKeyDown = (event) => {
 onMounted(() => {
   // debugger;
   window.addEventListener('keydown', handleKeyDown);
-    // Ensure the debugWindowRef is available globally after mounting
-    // window.debugWindowRef = debugWindowRef;
+  // Ensure the debugWindowRef is available globally after mounting
+  // window.debugWindowRef = debugWindowRef;
+  //TODO: This is the start of file watcher - do we need this?
+  window.addEventListener("custom-event", (event) => {
+    console.log(event.detail); // Output: Hello from Rust!
+  });
 });
 
 onBeforeUnmount(() => {
