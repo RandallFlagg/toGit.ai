@@ -18,28 +18,28 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "*", features = [] } #2.0.5
 
 [dependencies]
-tauri = { version = "*", features = [] } #2.2.5
-tauri-plugin-shell = "*" #2.2.0
+anyhow = "*" #1.0.95
+binaryornot = "*"
+env_logger = "*" #0.11.6
+git2 = "*" #0.19.2
+infer = "*"
+log = "*" #0.4
+notify = "*" #8.0.0
 serde = { version = "*", features = ["derive"] } #1.0.216
 serde_json = "*" #1.0.134
-git2 = "*" #0.19.2
-# shellexpand = "*" #3.1.0
-log = "*" #0.4
-env_logger = "*" #0.11.6
-# chrono = "*" #0.4.39
+tauri = { version = "*", features = [] } #2.2.5
+tauri-plugin-shell = "*" #2.2.0
 thiserror = "*"
+# shellexpand = "*" #3.1.0
+# chrono = "*" #0.4.39
 # file-format = "*" #0.1.0 
 # mime_guess = "*"
-infer = "*"
-binaryornot = "*"
-anyhow = "*" #1.0.95
 # #tauri-plugin-opener = "2"
 # # libgit2-sys = "*" #0.17.0+1.8.1
 # home = "*" #0.5.11
 # prettytable = "*"
 # # lazy_static = "*"
 # # backtrace = "*" #0.3.74
-# notify = "*" #8.0.0
 
 [dev-dependencies]
 # rustfmt = "*" #2.0.0" # Or the latest version you want to use

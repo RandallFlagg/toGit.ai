@@ -8,9 +8,14 @@ use anyhow::Result;
 // https://confidence.sh/blog/rust-module-system-explained/
 // use chrono::{DateTime, NaiveDate, NaiveDateTime, ParseError, Utc};
 use log::{debug, info};
+use notify::event::ModifyKind;
+use notify::{Config, Event, EventKind, RecommendedWatcher, RecursiveMode, Watcher};
+use std::sync::mpsc::{channel, Receiver};
+use std::sync::{Arc, Mutex, OnceLock};
+use std::time::{Duration, Instant};
 // use mime_guess::from_path;
 // use std::cell::OnceCell;
-use std::env;
+use std::{env, thread};
 // use file_format::{FileFormat, Kind};
 // use std::fs::{File, metadata};
 use std::path::{Path, PathBuf};
@@ -18,7 +23,7 @@ use std::process::exit;
 // use std::string::ParseError;
 // use std::sync::OnceLock;
 // use std::time::SystemTime;
-use tauri::{generate_context, State};
+use tauri::{generate_context, Emitter, State};
 use tauri::{
     menu::{AboutMetadata, Menu, MenuBuilder, MenuItemBuilder, SubmenuBuilder},
     Manager,
@@ -35,6 +40,12 @@ use crate::git_frontend::git_frontend_module::commit;
 use crate::git_frontend::git_frontend_module::get_file_content;
 use crate::git_frontend::git_frontend_module::get_repo_status;
 use crate::git_frontend::git_frontend_module::is_git_repo;
+
+// use notify::{DebouncedEvent, RecursiveMode, Watcher};
+// use std::sync::mpsc::{channel, Receiver};
+// use std::thread;
+// use std::time::Duration;
+// use std::path::Path;
 
 fn main() -> Result<(), GitFrontendError> {
     // Enable backtrace support
@@ -247,46 +258,33 @@ fn main_tauri() {
         println!("It is not a git repo");
         exit(0);
     }
-
+    // TAURI() - Initialize Tauri app
     tauri::Builder::default()
         // .plugin(tauri_plugin_opener::init())
         .setup(|app| {
-            let settings = MenuItemBuilder::new("Settings...").id("settings").accelerator("CmdOrCtrl+,").build(app)?;
+            // Initialize the OnceLock to store the AppHandle
+            static APP_HANDLE: OnceLock<Arc<Mutex<tauri::AppHandle>>> = OnceLock::new();
+            let app_handle = Arc::new(Mutex::new(app.handle().clone()));
+            APP_HANDLE.set(app_handle.clone()).unwrap();
 
-            let app_submenu = SubmenuBuilder::new(app, "App")
-                .about(Some(AboutMetadata {
-                    name: Some("Git Revision Graph".to_string()),
-                    version: Some("1.0.0".to_string()),
-                    ..Default::default()
-                }))
-                .separator()
-                .item(&settings)
-                .separator()
-                .services()
-                .separator()
-                .hide()
-                .hide_others()
-                .quit()
-                .build()?;
+            // Create a channel to receive the events
+            let (tx, rx) = channel();
 
-            // ... any other submenus
-            let menu = MenuBuilder::new(app)
-                .items(&[
-                    &app_submenu, // ... include references to any other submenus
-                ])
-                .build()?;
+            println!("Setting up the watcher...");
 
-            app.set_menu(menu)?;
+            // Create and set up the watcher
+            let watcher = setup_watcher("../../TEST REPO", tx).expect("Failed to setup watcher");
 
-            app.on_menu_event(move |app, event| {
-                if event.id() == settings.id() {
-                    info!("Settings menu clicked");
-                    // emit a window event to the frontend
-                    // let _event = app.emit("custom-event", "/settings");//TODO: open and fix.
-                }
+            // Handle the events in a separate thread
+            std::thread::spawn(move || {
+                handle_events(rx, app_handle);
             });
 
-            // Ok("Success".to_string())
+            // Ensure the watcher stays in scope
+            std::mem::forget(watcher);
+
+            setup_menu(app)?;
+
             Ok(())
         })
         // User Settings: Store user preferences or settings that can be accessed and modified throughout the application.
@@ -298,7 +296,145 @@ fn main_tauri() {
             get_file_content,
             change_file_status,
             commit /*get_git_data, show_menu*/
+	    /* Add your Tauri commands here */
         ]) //TODO: Open
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
+}
+
+fn setup_menu(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
+    let settings = MenuItemBuilder::new("Settings...").id("settings").accelerator("CmdOrCtrl+,").build(app)?;
+
+    let app_submenu = SubmenuBuilder::new(app, "App")
+        .about(Some(AboutMetadata {
+            name: Some("Git Revision Graph".to_string()),
+            version: Some("1.0.0".to_string()),
+            ..Default::default()
+        }))
+        .separator()
+        .item(&settings)
+        .separator()
+        .services()
+        .separator()
+        .hide()
+        .hide_others()
+        .quit()
+        .build()?;
+
+    // ... any other submenus
+    let menu = MenuBuilder::new(app)
+        .items(&[
+            &app_submenu, // ... include references to any other submenus
+        ])
+        .build()?;
+
+    app.set_menu(menu)?;
+
+    app.on_menu_event(move |app, event| {
+        if event.id() == settings.id() {
+            info!("Settings menu clicked");
+            // emit a window event to the frontend
+            // let _event = app.emit("custom-event", "/settings");//TODO: open and fix.
+        }
+    });
+
+    // Ok("Success".to_string())
+    Ok(())
+}
+
+fn setup_watcher(path: &str, tx: std::sync::mpsc::Sender<Event>) -> Result<RecommendedWatcher, Box<dyn std::error::Error>> {
+    println!("Setting up the watcher...");
+
+    // Create a watcher object using the recommended configuration
+    let mut watcher = RecommendedWatcher::new(
+        move |res: notify::Result<Event>| {
+            match res {
+                Ok(event) => {
+                    let event_clone = event.clone(); // Clone the event for logging
+                    println!("Received event: {:?}", event);
+                    if tx.send(event).is_err() {
+                        eprintln!("Error: Receiver dropped. Event: {:?}", event_clone);
+                    }
+                }
+                Err(e) => eprintln!("Error receiving event: {:?}", e),
+            }
+        },
+        Config::default().with_poll_interval(Duration::from_millis(10)),
+    )?;
+
+    // Specify the directory to watch, with recursive mode to watch subdirectories
+    let path_to_watch = Path::new(path);
+    watcher.watch(path_to_watch, RecursiveMode::Recursive)?;
+
+    println!("Watcher set up to watch for changes in {:?}", path_to_watch);
+
+    // Return the watcher to keep it in scope
+    Ok(watcher)
+}
+
+/// Main event loop to handle incoming events from the watcher
+fn handle_events(rx: Receiver<Event>, app_handle: Arc<Mutex<tauri::AppHandle>>) {
+    let mut last_event_time = Instant::now();
+
+    loop {
+        match rx.recv() {
+            Ok(event) => {
+                // Filter out frequent events
+                if let EventKind::Access(_) = event.kind {
+                    let now = Instant::now();
+                    if now.duration_since(last_event_time) < Duration::from_secs(1) {
+                        continue;
+                    }
+                    last_event_time = now;
+                }
+                // Log other events
+                match &event.kind {
+                    EventKind::Create(path) => {
+                        //TODO: If using _ then instead of path we use event.paths
+                        println!("File created: {:?}", path);
+                        // TAURI() - Emit event to the Tauri frontend
+                        app_handle.lock().unwrap().emit("file_event", format!("File created: {:?}", path)).unwrap();
+                    }
+                    EventKind::Modify(modify_kind) => {
+                        match modify_kind {
+                            ModifyKind::Any => println!("File modified (any): {:?}", event.paths),
+                            ModifyKind::Data(_) => println!("File data modified: {:?}", event.paths),
+                            ModifyKind::Metadata(_) => println!("File metadata modified: {:?}", event.paths),
+                            ModifyKind::Name(_) => println!("File renamed: {:?}", event.paths),
+                            _ => println!("Other modify event: {:?}", event),
+                        }
+                        // TAURI() - Emit event to the Tauri frontend
+                        app_handle.lock().unwrap().emit("file_event", format!("File modified: {:?}", event.paths)).unwrap();
+                    }
+                    EventKind::Remove(path) => {
+                        println!("File deleted: {:?}", path);
+                        // TAURI() - Emit event to the Tauri frontend
+                        // app_handle.lock().unwrap()..emil("file_event", format!("File deleted: {:?}", path)).unwrap();
+                    }
+                    EventKind::Access(path) => {
+                        println!("File accessed: {:?}", path);
+                        // TAURI() - Emit event to the Tauri frontend
+                        app_handle.lock().unwrap().emit("file_event", format!("File accessed: {:?}", path)).unwrap();
+                    }
+                    EventKind::Any => {
+                        println!("Any requested: {:?}", event.paths);
+                        // TAURI() - Emit event to the Tauri frontend
+                        app_handle.lock().unwrap().emit("file_event", "Rescan requested".to_string()).unwrap();
+                    }
+                    EventKind::Other => {
+                        println!("Other requested: {:?}", event.paths);
+                        // TAURI() - Emit event to the Tauri frontend
+                        app_handle.lock().unwrap().emit("file_event", "Rescan requested".to_string()).unwrap();
+                    }
+                    // _ => println!("Other event: {:?}", event), //TODO: Unreacable event - Del?
+                }
+            }
+            Err(e) => {
+                println!("Watch error: {:?}", e);
+                eprintln!("Receiver end closed or other error encountered. Exiting event loop.");
+                break;
+            }
+        }
+    }
+    println!("Event handling thread exiting.");
 }
