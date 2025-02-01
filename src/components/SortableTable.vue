@@ -31,13 +31,13 @@
               <th>
                 <input type="checkbox" :checked="allChecked" @click="toggleAllCheckboxes($event)">
               </th>
-              <th @click="() => sortTable('fileName')">
+              <th @click="() => sortTable('file_name')">
                 File Name
               </th>
-              <th @click="() => sortTable('fileType')">
+              <th @click="() => sortTable('file_type')">
                 File Type
               </th>
-              <th @click="() => sortTable('status')">
+              <th @click="() => sortTable('file_status')">
                 Status
               </th>
               <th @click="() => sortTable('size')">
@@ -49,7 +49,7 @@
               <th @click="() => sortTable('relative_file_path')">
                 Relative File Path
               </th>
-              <th @click="() => sortTable('fileExtension')">
+              <th @click="() => sortTable('file_extension')">
                 File Extension
               </th>
             </tr>
@@ -140,9 +140,55 @@ onMounted(() => {
 
 const sortedItems = computed(() => {
   return [...tableData.value].sort((a, b) => {
-    if (a[sortColumn.value] > b[sortColumn.value]) return sortOrder.value === 'asc' ? 1 : -1;
-    if (a[sortColumn.value] < b[sortColumn.value]) return sortOrder.value === 'asc' ? -1 : 1;
-    return 0;
+    const aValue = a[sortColumn.value];
+    const bValue = b[sortColumn.value];
+
+    // Handle undefined or null values by treating them as empty strings
+    const aString = (aValue !== undefined && aValue !== null) ? aValue.toString().toLowerCase() : '';
+    const bString = (bValue !== undefined && bValue !== null) ? bValue.toString().toLowerCase() : '';
+
+    // Convert values to numbers if possible
+    const aNumber = parseFloat(aString);
+    const bNumber = parseFloat(bString);
+
+    // Check if both values are numbers
+    const aIsNumber = !isNaN(aNumber);
+    const bIsNumber = !isNaN(bNumber);
+
+    if (aIsNumber && bIsNumber) {
+      // Compare as numbers
+      return sortOrder.value === 'asc' ? aNumber - bNumber : bNumber - aNumber;
+    } else {
+      // Compare as strings
+      if (aString > bString) return sortOrder.value === 'asc' ? 1 : -1;
+      if (aString < bString) return sortOrder.value === 'asc' ? -1 : 1;
+      return 0;
+    }
+  });
+});
+
+const sortedItems2 = (() => {
+  return [...tableData.value].sort((a, b) => {
+    const aValue = a[sortColumn.value];
+    const bValue = b[sortColumn.value];
+
+    // Convert values to numbers if possible
+    const aNumber = parseFloat(aValue);
+    const bNumber = parseFloat(bValue);
+
+    // Check if both values are numbers
+    const aIsNumber = !isNaN(aNumber);
+    const bIsNumber = !isNaN(bNumber);
+
+    if (aIsNumber && bIsNumber) {
+      // Compare as numbers
+      return sortOrder.value === 'asc' ? aNumber - bNumber : bNumber - aNumber;
+    } else {
+      // Compare as strings
+      if (aValue > bValue) return sortOrder.value === 'asc' ? 1 : -1;
+      if (aValue < bValue) return sortOrder.value === 'asc' ? -1 : 1;
+      return 0;
+    }
   });
 });
 
@@ -215,7 +261,6 @@ const toggleNav = async (section, statuses, commands, event) => {
 };
 
 const sortTable = (column) => {
-  debugger;
   //TODO: Some column are not sortable. Need to fix this
   if (sortColumn.value === column) {
     sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
@@ -223,6 +268,7 @@ const sortTable = (column) => {
     sortColumn.value = column;
     sortOrder.value = 'asc';
   }
+  //From here it continues to the sortedItem computed function
 };
 
 const selectItem = (item) => {
