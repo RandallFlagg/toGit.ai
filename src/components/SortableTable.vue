@@ -93,6 +93,14 @@
 import { ref, computed, onMounted } from 'vue';
 import DiffViewer from './DiffViewer.vue';
 
+import { listen } from '@tauri-apps/api/event';
+
+listen('file-watcher', async (event) => {
+  console.log('Received event:', event.payload);
+  await updateTable();
+  // Handle the event payload (e.g., update UI)
+});
+
 const statuses = {
   "INDEX_NEW": "New",
   "WT_NEW": "Untracked",

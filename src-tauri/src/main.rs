@@ -296,7 +296,7 @@ fn main_tauri() {
             get_file_content,
             change_file_status,
             commit /*get_git_data, show_menu*/
-	    /* Add your Tauri commands here */
+                   /* Add your Tauri commands here */
         ]) //TODO: Open
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
@@ -350,10 +350,14 @@ fn setup_watcher(path: &str, tx: std::sync::mpsc::Sender<Event>) -> Result<Recom
         move |res: notify::Result<Event>| {
             match res {
                 Ok(event) => {
-                    let event_clone = event.clone(); // Clone the event for logging
-                    println!("Received event: {:?}", event);
-                    if tx.send(event).is_err() {
-                        eprintln!("Error: Receiver dropped. Event: {:?}", event_clone);
+                    if (event.kind.is_create() || event.kind.is_modify() || event.kind.is_remove()) && !event.paths[0].to_str().unwrap().contains(".kate-swp") {
+                        let event_clone = event.clone(); // Clone the event for logging
+                        println!("Received event: {:?}", event);
+                        if tx.send(event).is_err() {
+                            eprintln!("Error: Receiver dropped. Event: {:?}", event_clone);
+                        }
+                    } else {
+                        // debug!("Skipping event: {:?}", event);
                     }
                 }
                 Err(e) => eprintln!("Error receiving event: {:?}", e),
@@ -374,59 +378,68 @@ fn setup_watcher(path: &str, tx: std::sync::mpsc::Sender<Event>) -> Result<Recom
 
 /// Main event loop to handle incoming events from the watcher
 fn handle_events(rx: Receiver<Event>, app_handle: Arc<Mutex<tauri::AppHandle>>) {
-    let mut last_event_time = Instant::now();
-
+    let evnet_name = "file-watcher";
+    // let mut last_event_time = Instant::now();
     loop {
         match rx.recv() {
             Ok(event) => {
                 // Filter out frequent events
-                if let EventKind::Access(_) = event.kind {
-                    let now = Instant::now();
-                    if now.duration_since(last_event_time) < Duration::from_secs(1) {
-                        continue;
-                    }
-                    last_event_time = now;
-                }
+                // if let EventKind::Access(_) = event.kind {
+                // let now = Instant::now();
+                // if now.duration_since(last_event_time) < Duration::from_secs(1) {
+                // continue;
+                // }
+                // last_event_time = now;
+                // }
                 // Log other events
                 match &event.kind {
                     EventKind::Create(path) => {
                         //TODO: If using _ then instead of path we use event.paths
-                        println!("File created: {:?}", path);
+                        debug!("File created: {:?}", path);
                         // TAURI() - Emit event to the Tauri frontend
-                        app_handle.lock().unwrap().emit("file_event", format!("File created: {:?}", path)).unwrap();
+                        app_handle.lock().unwrap().emit(evnet_name, format!("File created: {:?}", path)).unwrap();
                     }
                     EventKind::Modify(modify_kind) => {
                         match modify_kind {
-                            ModifyKind::Any => println!("File modified (any): {:?}", event.paths),
-                            ModifyKind::Data(_) => println!("File data modified: {:?}", event.paths),
-                            ModifyKind::Metadata(_) => println!("File metadata modified: {:?}", event.paths),
-                            ModifyKind::Name(_) => println!("File renamed: {:?}", event.paths),
-                            _ => println!("Other modify event: {:?}", event),
+                            // ModifyKind::Any => println!("File modified (any): {:?}", event.paths),
+                            ModifyKind::Data(_) => println!("File data modified: {:?}", event.paths), //Edit
+                            ModifyKind::Metadata(_) => println!("File metadata modified: {:?}", event.paths), //TOUCH
+                            ModifyKind::Name(_) => println!("File renamed: {:?}", event.paths),       //RENAME
+                            _ => {
+                                println!("Other modify event: {:?}", event);
+                                panic!("How did we get here? {:?}", event);
+                            }
                         }
                         // TAURI() - Emit event to the Tauri frontend
-                        app_handle.lock().unwrap().emit("file_event", format!("File modified: {:?}", event.paths)).unwrap();
+                        app_handle.lock().unwrap().emit(evnet_name, format!("File modified: {:?}", event.paths)).unwrap();
                     }
                     EventKind::Remove(path) => {
                         println!("File deleted: {:?}", path);
                         // TAURI() - Emit event to the Tauri frontend
-                        // app_handle.lock().unwrap()..emil("file_event", format!("File deleted: {:?}", path)).unwrap();
+                        app_handle.lock().unwrap().emit(evnet_name, format!("File deleted: {:?}", path)).unwrap();
                     }
-                    EventKind::Access(path) => {
-                        println!("File accessed: {:?}", path);
-                        // TAURI() - Emit event to the Tauri frontend
-                        app_handle.lock().unwrap().emit("file_event", format!("File accessed: {:?}", path)).unwrap();
+                    // EventKind::Access(path) => {
+                    //     println!("File accessed: {:?}", path);
+                    //     // TAURI() - Emit event to the Tauri frontend
+                    //     app_handle.lock().unwrap().emit(event_name, format!("File accessed: {:?}", path)).unwrap();
+                    // }
+                    // EventKind::Any => {
+                    //     println!("Any requested: {:?}", event.paths);
+                    //     // TAURI() - Emit event to the Tauri frontend
+                    //     // app_handle.lock().unwrap().emit(event_name, "Rescan requested".to_string()).unwrap();
+                    //     continue;
+                    // }
+                    // EventKind::Other => {
+                    //     println!("Other requested: {:?}", event.paths);
+                    //     // TAURI() - Emit event to the Tauri frontend
+                    //     app_handle.lock().unwrap().emit(event_name, "Rescan requested".to_string()).unwrap();
+                    // }
+                    _ => {
+                        eprintln!("How did we get here? {:?}", event);
+                        panic!("How did we get here?");
+                        // Err(String::from("Cannot divide by zero"))
+                        // println!("Other event: {:?}", event), //TODO: Unreacable event - Del?
                     }
-                    EventKind::Any => {
-                        println!("Any requested: {:?}", event.paths);
-                        // TAURI() - Emit event to the Tauri frontend
-                        app_handle.lock().unwrap().emit("file_event", "Rescan requested".to_string()).unwrap();
-                    }
-                    EventKind::Other => {
-                        println!("Other requested: {:?}", event.paths);
-                        // TAURI() - Emit event to the Tauri frontend
-                        app_handle.lock().unwrap().emit("file_event", "Rescan requested".to_string()).unwrap();
-                    }
-                    // _ => println!("Other event: {:?}", event), //TODO: Unreacable event - Del?
                 }
             }
             Err(e) => {

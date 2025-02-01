@@ -44,7 +44,16 @@ thiserror = "*"
 [dev-dependencies]
 # rustfmt = "*" #2.0.0" # Or the latest version you want to use
 # log_macro = { path = "../../log_macro" }
+# clippy = "*"
+# clippy_utils = "*"
+# quote = "*"
+# syn = { version = "*", features = ["full"] }
+# rustc_errors = "*"
+
+# clippy_lints = "*"
+# clippy_utils = "*"
 
 [features]
+DELETE_THIS_SECTION = []
 debug = []
 testing = []

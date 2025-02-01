@@ -6,26 +6,16 @@ import DebugWindow from './components/DebugWindow.vue';
 
 const debugWindowRef = ref(null);
 
-const toggleDebugWindow = () => {
-  // if (debugWindowRef.value) {
-  debugWindowRef.value.toggleVisibility();
-  // }
-};
-
-const handleKeyDown = (event) => {
-  if (event.ctrlKey && event.key === 'D') {
-    toggleDebugWindow();
-  }
-};
-
 onMounted(() => {
   // debugger;
-  window.addEventListener('keydown', handleKeyDown);
+
+  //TODO: DEL?
   // Ensure the debugWindowRef is available globally after mounting
   // window.debugWindowRef = debugWindowRef;
-  //TODO: This is the start of file watcher - do we need this?
-  window.addEventListener("custom-event", (event) => {
-    console.log(event.detail); // Output: Hello from Rust!
+  window.addEventListener('keydown', (event) => {
+    if (event.ctrlKey && event.key === 'D') {
+      debugWindowRef.value.toggleVisibility();
+    }
   });
 });
 
