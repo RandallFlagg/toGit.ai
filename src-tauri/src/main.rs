@@ -398,6 +398,10 @@ fn handle_events(rx: Receiver<Event>, app_handle: Arc<Mutex<tauri::AppHandle>>) 
                         debug!("File created: {:?}", path);
                         // TAURI() - Emit event to the Tauri frontend
                         app_handle.lock().unwrap().emit(evnet_name, format!("File created: {:?}", path)).unwrap();
+                        //TODO: Consider using this in production to prevent panic in the code in case of an error
+                        // if let Err(e) = app_handle.lock().unwrap().emit("file_event", format!("File created: {:?}", path)) {
+                        //     log::error!("Failed to emit event: {:?}", e);
+                        // }
                     }
                     EventKind::Modify(modify_kind) => {
                         match modify_kind {
