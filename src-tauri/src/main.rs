@@ -260,7 +260,6 @@ fn main_tauri() {
     }
     // TAURI() - Initialize Tauri app
     tauri::Builder::default()
-        // .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             // Initialize the OnceLock to store the AppHandle
             static APP_HANDLE: OnceLock<Arc<Mutex<tauri::AppHandle>>> = OnceLock::new();
@@ -287,6 +286,8 @@ fn main_tauri() {
 
             Ok(())
         })
+        // .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         // User Settings: Store user preferences or settings that can be accessed and modified throughout the application.
         // Database Connection Pool: Manage a pool of database connections that can be shared across different parts of the application.
         // Authentication State: Keep track of user authentication status and related information.

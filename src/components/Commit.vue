@@ -3,6 +3,15 @@ import { ref } from 'vue';
 // import ResizableSplitPane from './ResizableSplitPane.vue';
 import SortableTable from './SortableTable.vue';
 
+//TODO: Add incremental search
+//TODO: Create a seperator between staged/unstaged
+//TODO: Add partial staging
+//TODO: Add colors for different stages?
+//TODO: Add a way to select all staged/unstage
+//TODO: Add a new branch button
+// TODO: Add buttons to hide/show ignored files
+// TODO: Add buttons to hide/show untracked files
+
 // Reactive references for form data and table data
 const form = ref({
   message: '',
