@@ -29,7 +29,7 @@
             renderNothingWhenEmpty: false,
         };
 
-        debugger;
+        // debugger;
         const diff = $diffString;
 
         renderedDiff = diff
@@ -39,7 +39,7 @@
 
     // Reactive statement to handle updates
     $: {
-        debugger;
+        // debugger;
         const diff = $diffString;
         if (diff === "Binary file") {
             renderedDiff = `<h3>Preview: ${diff}</h3>`;

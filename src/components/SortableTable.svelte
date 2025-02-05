@@ -216,7 +216,6 @@
   };
 
   const getFileDiff = async (filePath) => {
-    debugger;
     const fileContent = await window.__TAURI__.core.invoke("get_file_content", {
       repoPath: "../../TEST REPO",
       relativeFilePath: filePath,
