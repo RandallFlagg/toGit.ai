@@ -182,9 +182,9 @@ rust-project.json
 .ionide
 
 # End of https://www.toptal.com/developers/gitignore/api/visualstudiocode,rust,rust-analyzer,node
-*.local
 
 # Editor directories and files
+#====================#
 .idea
 .DS_Store
 *.suo
@@ -194,21 +194,36 @@ rust-project.json
 *.sw?
 
 # Logs
+#====================#
 pnpm-debug.log*
 
-dist-ssr
+# Qudo AI
+#===================#
+history.sqlite
 
+General - What is this? put in a category
+#====================#
+*.local
+dist-ssr
 /cypress/videos/
 /cypress/screenshots/
 
-
-DEVELOPMENT
+#TEMPORARY IGNORED
 #===================#
 src/views/DEL/_HelloWorld.vue
-
 node_modules.windows/
 node_modules.linux/
 DEL/
 /DEL
-# Qudo AI
-history.sqlite
+.github.cache.yaml
+.github.yaml
+babel.config.js
+babel.config.js.DEL
+.vscode/settings.json
+public/vite.svg
+src/test.html
+src/vite-env.d.ts
+src/assets/app.css
+src/assets/styles-ext.css
+src/assets/styles.css
+src/assets/svelte.svg
