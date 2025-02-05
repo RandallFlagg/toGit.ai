@@ -47,6 +47,11 @@ use crate::git_frontend::git_frontend_module::is_git_repo;
 // use std::time::Duration;
 // use std::path::Path;
 
+#[tauri::command]
+fn get_launch_path() -> String {
+    env::current_dir().unwrap().to_str().unwrap().to_string()
+}
+
 fn main() -> Result<(), GitFrontendError> {
     // Enable backtrace support
     std::env::set_var("RUST_LIB_BACKTRACE", "1");
@@ -239,6 +244,7 @@ fn main_filesystem(full_file_path: Option<&str>) -> Result<(), GitFrontendError>
 // }
 
 //TODO: Add an option to send the repo path from the command line
+//TODO: MultiInstance - Allowed? https://v2.tauri.app/plugin/single-instance/#setup
 fn main_tauri() {
     // Get the command-line arguments
     #[cfg(not(debug_assertions))]
@@ -288,6 +294,7 @@ fn main_tauri() {
         })
         // .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
         // User Settings: Store user preferences or settings that can be accessed and modified throughout the application.
         // Database Connection Pool: Manage a pool of database connections that can be shared across different parts of the application.
         // Authentication State: Keep track of user authentication status and related information.
@@ -296,8 +303,12 @@ fn main_tauri() {
             get_repo_status,
             get_file_content,
             change_file_status,
-            commit /*get_git_data, show_menu*/
-                   /* Add your Tauri commands here */
+            commit,
+            get_launch_path
+            //get_git_data,
+            //show_menu
+            // read_clipboard_text
+            /* Add your Tauri commands here */
         ]) //TODO: Open
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
