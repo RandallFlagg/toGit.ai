@@ -61,6 +61,7 @@
     // Handle the event payload (e.g., update UI)
   });
 
+  //TODO: Fix the logic so it will work
   // Sorting logic
   $: sortedItems = [...$tableData].sort((a, b) => {
     const aValue = a[$sortColumn];

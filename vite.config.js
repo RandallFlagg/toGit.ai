@@ -1,4 +1,5 @@
 import { defineConfig } from "vite";
+import { svelte } from "@sveltejs/vite-plugin-svelte";
 import vue from "@vitejs/plugin-vue";
 //import vueDevTools from "vite-plugin-vue-devtools";
 //import { fileURLToPath, URL } from "node:url";
@@ -8,10 +9,14 @@ const host = process.env.TAURI_DEV_HOST;
 // https://vite.dev/config/
 export default defineConfig(async () => ({
   plugins: [
-    vue(),
+    //    vue(),
+    svelte()
     //vueDevTools(),
   ],
 
+  optimizeDeps: {
+    entries: []
+  },
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
   // 1. prevent vite from obscuring rust errors
@@ -30,7 +35,7 @@ export default defineConfig(async () => ({
       : undefined,
     watch: {
       // 3. tell vite to ignore watching `src-tauri`
-      ignored: ["**/src-tauri/**"],
+      ignored: ["**/src-tauri/**", "pnpm-lock.yaml", "node_modules"],
     },
     //  transpileDependencies: true,
     //resolve: {

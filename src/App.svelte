@@ -1,6 +1,6 @@
 <script>
   import Router from 'svelte-spa-router';
-  import routes from './routes'
+  import routes from './router/routes'
   import DebugWindow from './components/DebugWindow.svelte';
 </script>
 

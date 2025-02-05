@@ -45,7 +45,8 @@ const routes = [
     path: '/',
     name: 'IndexPage',
     // component: IndexPage
-    component: Commit
+    // component: Commit
+    component: Clone
   },
   {
     path: '/clone',

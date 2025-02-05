@@ -3,8 +3,8 @@
 // import Book from './routes/Book.svelte'
 // import NotFound from './routes/NotFound.svelte'
 // import SortableTable from './components/SortableTable.svelte';
-import Commit from './components/Commit.svelte';
-import IndexPage from './components/IndexPage.svelte';
+import Commit from '../components/Commit.svelte';
+import IndexPage from '../components/IndexPage.svelte';
 // import DiffViewer from './components/DiffViewer.svelte';
 // import MyCounter from './components/MyCounter.svelte';
 // import DebugWindow from './components/DebugWindow.svelte';
