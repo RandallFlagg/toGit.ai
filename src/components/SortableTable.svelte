@@ -9,7 +9,8 @@
   import DiffViewer from "./DiffViewer.svelte";
 
   // Define writable stores
-  const diffString = writable('');
+  //const diffString = writable('');
+  let diffString;
   const explanationVisible = writable(false);
   const navEnabled = writable({
     untracked: false,
@@ -21,10 +22,13 @@
     submodules: false
   });
   const previewText = writable('');
-  const selectedItem = writable(null);
-  const sortColumn = writable('');
-  const sortOrder = writable('asc');
-  const tableData = writable([]);
+  // const selectedItem = writable(null);
+  let selectedItem;
+  // const sortColumn = writable('');
+  let sortColumn;
+  // const sortOrder = writable('asc');
+  let sortOrder;// = "asc";
+  let tableData = [];// = writable([]);
 
   const statuses = {
     INDEX_NEW: "New",
@@ -63,10 +67,11 @@
 
   //TODO: Fix the logic so it will work
   // Sorting logic
-  $: sortedItems = [...$tableData].sort((a, b) => {
-    const aValue = a[$sortColumn];
-    const bValue = b[$sortColumn];
 
+  $: sortedItems = tableData ? [...tableData].sort((a, b) => {
+    const aValue = a[sortColumn];
+    const bValue = b[sortColumn];
+    
     // Handle undefined or null values by treating them as empty strings
     const aString =
       aValue !== undefined && aValue !== null
@@ -87,41 +92,14 @@
 
     if (aIsNumber && bIsNumber) {
       // Compare as numbers
-      return $sortOrder === "asc" ? aNumber - bNumber : bNumber - aNumber;
+      return sortOrder === "asc" ? aNumber - bNumber : bNumber - aNumber;
     } else {
       // Compare as strings
-      if (aString > bString) return $sortOrder === "asc" ? 1 : -1;
-      if (aString < bString) return $sortOrder === "asc" ? -1 : 1;
+      if (aString > bString) return sortOrder === "asc" ? 1 : -1;
+      if (aString < bString) return sortOrder === "asc" ? -1 : 1;
       return 0;
     }
-  });
-
-  const sortedItems2 = () => {
-    return [...tableData.value].sort((a, b) => {
-      const aValue = a[sortColumn.value];
-      const bValue = b[sortColumn.value];
-
-      // Convert values to numbers if possible
-      const aNumber = parseFloat(aValue);
-      const bNumber = parseFloat(bValue);
-
-      // Check if both values are numbers
-      const aIsNumber = !isNaN(aNumber);
-      const bIsNumber = !isNaN(bNumber);
-
-      if (aIsNumber && bIsNumber) {
-        // Compare as numbers
-        return sortOrder.value === "asc"
-          ? aNumber - bNumber
-          : bNumber - aNumber;
-      } else {
-        // Compare as strings
-        if (aValue > bValue) return sortOrder.value === "asc" ? 1 : -1;
-        if (aValue < bValue) return sortOrder.value === "asc" ? -1 : 1;
-        return 0;
-      }
-    });
-  };
+  }) : [];
 
   const determineAllChecked = () => {
     return (
@@ -144,7 +122,7 @@
 
   const updateTable = async () => {
     const fetchedDataAfter = await getRepoStatus();
-    tableData.set(fetchedDataAfter);
+    tableData = fetchedDataAfter;
   };
 
   const toggleNav = async (section, statuses, commands, event) => {
@@ -203,16 +181,16 @@
   const sortTable = (column) => {
     //TODO: Some column are not sortable. Need to fix this
     if (sortColumn === column) {
-      sortOrder.set(sortOrder === "asc" ? "desc" : "asc");
+      sortOrder = sortOrder === "asc" ? "desc" : "asc";
     } else {
-      sortColumn.set(column);
-      sortOrder.set("asc");
+      sortColumn = column;
+      sortOrder = "asc";
     }
     //From here it continues to the sortedItem computed function
   };
 
   const selectItem = (item) => {
-    selectedItem.set(item);
+    selectedItem = item;
     getFileDiff(item.relative_file_path);
   };
 
@@ -221,12 +199,12 @@
       repoPath: "../../TEST REPO",
       relativeFilePath: filePath,
     });
+
     // previewText.value = fileContent;
-    diffString.set(fileContent.trim()); // TODO: Remove the trim and fix before being sent
+    diffString = fileContent.trim(); // TODO: Remove the trim and fix before being sent
   };
 
   const toggleCheckbox = async (item, event) => {
-    debugger;
     const changeStatusObject = {
       relativeFilePath: item.relative_file_path,
       command: event.target.checked
@@ -256,15 +234,16 @@
   };
 
   const toggleAllCheckboxes = async (event) => {
-    const isChecked = event.target.checked;
-    //TODO: Need to check a case of modified file after staged - Add more descritption
-    await changeStatus({
-      relativeFilePath: "*",
-      command: isChecked ? "Add All" : "Unstage All",
-    });
-    tableData.forEach((item) => {
-      item.selected = isChecked;
-    });
+    debugger;
+    // const isChecked = event.target.checked;
+    // //TODO: Need to check a case of modified file after staged - Add more descritption
+    // await changeStatus({
+    //   relativeFilePath: "*",
+    //   command: isChecked ? "Add All" : "Unstage All",
+    // });
+    // tableData.forEach((item) => {
+    //   item.selected = isChecked;
+    // });
   };
 
   // Reactive statement to update `allChecked` based on the function result

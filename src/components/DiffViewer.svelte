@@ -1,6 +1,5 @@
 <script>
-    import { onMount, onDestroy } from "svelte";
-    import { writable } from "svelte/store";
+    // import { onMount, onDestroy } from "svelte";
     import "diff2html/bundles/css/diff2html.min.css";
     import * as Diff2Html from "diff2html"; //TODO: Find a way to use local resources without NPM if possible?
     // const Diff2Html = {};
@@ -30,20 +29,20 @@
         };
 
         // debugger;
-        const diff = $diffString;
+        // const diff = $diffString;
 
-        renderedDiff = diff
-            ? Diff2Html.html(diff, configuration)
+        renderedDiff = diffString
+            ? Diff2Html.html(diffString, configuration)
             : "";
     };
 
     // Reactive statement to handle updates
     $: {
         // debugger;
-        const diff = $diffString;
-        if (diff === "Binary file") {
-            renderedDiff = `<h3>Preview: ${diff}</h3>`;
-        } else if (diff) {
+        // const diff = $diffString;
+        if (diffString === "Binary file") {
+            renderedDiff = `<h3>Preview: ${diffString}</h3>`;
+        } else if (diffString) {
             showDiff();
         } else {
             renderedDiff = "<h3>Preview: No Changes</h3>";
