@@ -9,6 +9,7 @@
     };
 
     const addLog = (message, color = "white") => {
+        console.log(message);
         logs.push({ message, color });
     };
 

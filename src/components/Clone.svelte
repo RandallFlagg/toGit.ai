@@ -1,8 +1,10 @@
 <script>
-  import { onMount } from "svelte";
+  import { onMount, onDestroy } from "svelte";
+  import { writable } from "svelte/store";
   import { writeText, readText } from "@tauri-apps/plugin-clipboard-manager";
   import { link } from "svelte-spa-router";
-  import {path} from '@tauri-apps/api';
+  import { path } from "@tauri-apps/api"; // /path
+  import { open, save } from "@tauri-apps/plugin-dialog";
   // import FolderExplorerButton from './FolderExplorerButton.svelte';
 
   let commandOutput = "";
@@ -47,31 +49,87 @@
     dir: "",
   };
 
+  //TODO: Take this out to util file
+  const getCWD = async (trailingSlash) => {
+    const result =
+      (await __TAURI__.core.invoke("get_launch_path")) +
+      (trailingSlash ? path.sep() : "");
+    return result;
+  };
+
+  //TODO: If a path was passed from the command line or the file explorer use it in form.dir instead of the CWD
   onMount(async () => {
-    try {
-      // const currentDir = await __TAURI__.path.executableDir();
-      // console.log('Current Working Directory:', currentDir);
-      form.dir = await __TAURI__.core.invoke('get_launch_path') + path.sep();
-      console.log('Launch Path:', form.dir);
+    console.log(Date.now() + ": entering clone onMount");
+    let isFocusHandled = false;
+    const clipboardToRepoInput = async () => {
+      if (isFocusHandled) return;
+      isFocusHandled = true;
+      window.removeEventListener("focus", clipboardToRepoInput);
+      console.log(Date.now() + ": Window has focus");
 
-      // Use Tauri's clipboard API to read text
-      const clipboardText = await readText();
+      try {
+        // Use Tauri's clipboard API to read text
+        const clipboardText = await readText();
 
-      if (
-        (clipboardText.startsWith("https") ||
-          clipboardText.startsWith("git@")) &&
-        clipboardText.endsWith(".git")
-      ) {
-        repoInput.value = clipboardText;
-        form.repo = clipboardText;
-        // Manually dispatch an input event to ensure `handleRepoInput` is called
-        const event = new Event("input", { bubbles: true });
-        repoInput.dispatchEvent(event);
+        // console.log("repoInput before dispatch:", repoInput); // Debugging log
+        // console.log(typeof repoInput); // Should be "object" (an HTMLInputElement)
+        // console.log(repoInput instanceof HTMLInputElement); // Should be true
+        // console.log("repoInput prototype:", Object.getPrototypeOf(repoInput));
+        // console.log("repoInput methods:", Object.keys(repoInput.__proto__));
+        // if (!repoInput) {
+        //   console.error("repoInput is not assigned!");
+        // } else {
+        //   console.log("repoInput is assigned!");
+        // }
+
+        if (
+          (clipboardText.startsWith("https") ||
+            clipboardText.startsWith("git@")) &&
+          clipboardText.endsWith(".git")
+        ) {
+          repoInput = clipboardText;
+          form.repo = clipboardText;
+          if (repoInput.dispatchEvent) {
+            // Manually dispatch an input event to ensure `handleRepoInput` is called
+            const event = new Event("input", { bubbles: true });
+            repoInput.dispatchEvent(event);
+          } else {
+            handleRepoInput(clipboardText);
+          }
+        }
+      } catch (err) {
+        debugger;
+        console.error("Failed to read clipboard contents:", err);
       }
-    } catch (err) {
-      debugger;
-      console.error("Failed to read clipboard contents:", err);
-    }
+
+      setTimeout(
+        () => 
+        {
+          console.log("readdig");
+          window.addEventListener("focus", clipboardToRepoInput);
+          isFocusHandled = false;
+        },
+        1000,
+      );
+    };
+
+    // Add the focus event listener when the component mounts
+    window.addEventListener("focus", clipboardToRepoInput);
+
+    // Cleanup the event listener when the component is destroyed
+    onDestroy(() => {
+      console.log("Removing focus event listener");
+      window.removeEventListener("focus", clipboardToRepoInput);
+    });
+
+    // const currentDir = await __TAURI__.path.executableDir();
+    // console.log('Current Working Directory:', currentDir);
+    form.dir = await getCWD(true);
+    debugLog("Launch Path:", form.dir);
+
+    // clipboardToRepoInput();
+
+    console.log("exiting clone onMount");
   });
 
   const getRepoName = (url) => {
@@ -103,6 +161,7 @@
       });
 
       if (selectedFolder) {
+        form.dir = selectedFolder + path.sep();
         console.log("Selected folder:", selectedFolder);
         // You can handle the selected folder path here
       }
@@ -112,11 +171,12 @@
   };
 
   const handleRepoInput = (event) => {
-    const value = event.target.value;
-    if (value.endsWith(".git")) {
-      const result = getRepoName(value);
+    const url = typeof event === "string" ? event : event.target.value;
+    if (url.endsWith(".git")) {
+      const result = getRepoName(url);
       // if (!form.repo.includes(result)) {
-      form.dir = form.dir + result;
+      // form.dir = form.dir + result;
+      form.dir += result;
       // }
     }
   };
