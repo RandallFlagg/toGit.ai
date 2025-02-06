@@ -1,7 +1,7 @@
 <script>
   // import ResizableSplitPane from './ResizableSplitPane.vue';
   import SortableTable from "./SortableTable.svelte";
-  import { writable } from "svelte/store";
+  // import { writable } from "svelte/store";
 
   //TODO: Add incremental search
   //TODO: Create a seperator between staged/unstaged
@@ -14,7 +14,7 @@
 
   // Reactive references for form data and table data
   // Define writable stores
-  const form = writable({
+  const form = {
     message: "",
     all: false,
     amend: false,
@@ -47,11 +47,10 @@
     pathspecFile: "",
     pathspecFileNul: false,
     trailer: "",
-  });
+  };
 
-  const tableData = writable([]);
-  const selectedItem = writable(null);
-  const commandOutput = writable("");
+  //const commandOutput = writable("");
+  let commandOutput;
 
   // Function to generate the git command
   const generateCommand = async () => {
@@ -85,7 +84,7 @@
     if (form.pathspecFileNul) command += " --pathspec-file-nul";
     if (form.trailer) command += ` --trailer=${form.trailer}`;
 
-    commandOutput.set("NOT COMMITTED: " + command);
+    commandOutput = "NOT COMMITTED: " + command;
     // const status = await window.__TAURI__.core.invoke('commit', { });
     //TODO: Make the error messages show on the frontend
   };
