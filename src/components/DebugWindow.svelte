@@ -1,31 +1,30 @@
 <script>
     import { onMount, onDestroy } from "svelte";
-    import { writable } from "svelte/store";
 
-    let isVisible = writable(false);
-    let logs = writable([]);
+    let isVisible;
+    let logs = [];
 
     const toggleVisibility = () => {
-        isVisible.update(value => !value);
+        isVisible = !isVisible;
     };
 
     const addLog = (message, color = "white") => {
-        logs.update(currentLogs => [...currentLogs, { message, color }]);
+        logs.push({ message, color });
     };
 
     const clearLogs = () => {
-        logs.set([]);
+        logs = [];
     };
 
     const show = () => {
-        isVisible.set(true);
+        isVisible = true;
     };
 
     const hide = () => {
-        isVisible.set(false);
+        isVisible = false;
     };
 
-    const handleKeydown = event => {
+    const handleKeydown = (event) => {
         if (event.ctrlKey && event.key === "d") {
             toggleVisibility();
         }
@@ -43,6 +42,18 @@
     window.debugLog = addLog;
     window.toggleDebugWindow = toggleVisibility;
 </script>
+
+{#if isVisible}
+    <div class="debug-window">
+        <button on:click={toggleVisibility}>Close</button>
+        <button on:click={clearLogs}>Clear</button>
+        {#each logs as { message, color }, index (index)}
+            <div style="color: {color}">
+                <span>{message}</span>
+            </div>
+        {/each}
+    </div>
+{/if}
 
 <style>
     .debug-window-check {
@@ -69,15 +80,3 @@
         z-index: 1000;
     }
 </style>
-
-{#if $isVisible}
-    <div class="debug-window">
-        <button on:click={toggleVisibility}>Close</button>
-        <button on:click={clearLogs}>Clear</button>
-        {#each $logs as { message, color }, index (index)}
-            <div style="color: {color}">
-                <span>{message}</span>
-            </div>
-        {/each}
-    </div>
-{/if}

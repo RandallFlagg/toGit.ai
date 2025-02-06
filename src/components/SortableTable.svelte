@@ -5,30 +5,26 @@
   //TODO: What should be shown in the preview pane when a file is selected? Modofied, Staged, Untracked, Deleted, etc.
   import { onMount } from "svelte";
   import { listen } from "@tauri-apps/api/event";
-  import { writable } from "svelte/store";
+  // import { writable } from "svelte/store";
   import DiffViewer from "./DiffViewer.svelte";
 
   // Define writable stores
-  //const diffString = writable('');
   let diffString;
-  const explanationVisible = writable(false);
-  const navEnabled = writable({
+  // const explanationVisible = writable(false);
+  const navEnabled = {
     untracked: false,
     tracked: false,
     added: false,
     deleted: false,
     modified: false,
     files: false,
-    submodules: false
-  });
-  const previewText = writable('');
-  // const selectedItem = writable(null);
+    submodules: false,
+  };
+
   let selectedItem;
-  // const sortColumn = writable('');
   let sortColumn;
-  // const sortOrder = writable('asc');
-  let sortOrder;// = "asc";
-  let tableData = [];// = writable([]);
+  let sortOrder; // = "asc";
+  let tableData = [];
 
   const statuses = {
     INDEX_NEW: "New",
@@ -68,38 +64,40 @@
   //TODO: Fix the logic so it will work
   // Sorting logic
 
-  $: sortedItems = tableData ? [...tableData].sort((a, b) => {
-    const aValue = a[sortColumn];
-    const bValue = b[sortColumn];
-    
-    // Handle undefined or null values by treating them as empty strings
-    const aString =
-      aValue !== undefined && aValue !== null
-        ? aValue.toString().toLowerCase()
-        : "";
-    const bString =
-      bValue !== undefined && bValue !== null
-        ? bValue.toString().toLowerCase()
-        : "";
+  $: sortedItems = tableData
+    ? [...tableData].sort((a, b) => {
+        const aValue = a[sortColumn];
+        const bValue = b[sortColumn];
 
-    // Convert values to numbers if possible
-    const aNumber = parseFloat(aString);
-    const bNumber = parseFloat(bString);
+        // Handle undefined or null values by treating them as empty strings
+        const aString =
+          aValue !== undefined && aValue !== null
+            ? aValue.toString().toLowerCase()
+            : "";
+        const bString =
+          bValue !== undefined && bValue !== null
+            ? bValue.toString().toLowerCase()
+            : "";
 
-    // Check if both values are numbers
-    const aIsNumber = !isNaN(aNumber);
-    const bIsNumber = !isNaN(bNumber);
+        // Convert values to numbers if possible
+        const aNumber = parseFloat(aString);
+        const bNumber = parseFloat(bString);
 
-    if (aIsNumber && bIsNumber) {
-      // Compare as numbers
-      return sortOrder === "asc" ? aNumber - bNumber : bNumber - aNumber;
-    } else {
-      // Compare as strings
-      if (aString > bString) return sortOrder === "asc" ? 1 : -1;
-      if (aString < bString) return sortOrder === "asc" ? -1 : 1;
-      return 0;
-    }
-  }) : [];
+        // Check if both values are numbers
+        const aIsNumber = !isNaN(aNumber);
+        const bIsNumber = !isNaN(bNumber);
+
+        if (aIsNumber && bIsNumber) {
+          // Compare as numbers
+          return sortOrder === "asc" ? aNumber - bNumber : bNumber - aNumber;
+        } else {
+          // Compare as strings
+          if (aString > bString) return sortOrder === "asc" ? 1 : -1;
+          if (aString < bString) return sortOrder === "asc" ? -1 : 1;
+          return 0;
+        }
+      })
+    : [];
 
   const determineAllChecked = () => {
     return (
@@ -126,7 +124,6 @@
   };
 
   const toggleNav = async (section, statuses, commands, event) => {
-    //TODO: Not loading because there is a deleted file. Need to fix this
     const fetchedDataBefore = await getRepoStatus();
     //TODO: add here reference to section.
     //TODO: Use AI to solve this problem
@@ -234,16 +231,15 @@
   };
 
   const toggleAllCheckboxes = async (event) => {
-    debugger;
-    // const isChecked = event.target.checked;
-    // //TODO: Need to check a case of modified file after staged - Add more descritption
-    // await changeStatus({
-    //   relativeFilePath: "*",
-    //   command: isChecked ? "Add All" : "Unstage All",
-    // });
-    // tableData.forEach((item) => {
-    //   item.selected = isChecked;
-    // });
+    const isChecked = event.target.checked;
+    //TODO: Need to check a case of modified file after staged - Add more descritption
+    await changeStatus({
+      relativeFilePath: "*",
+      command: isChecked ? "Add All" : "Unstage All",
+    });
+    tableData.forEach((item) => {
+      item.selected = isChecked;
+    });
   };
 
   // Reactive statement to update `allChecked` based on the function result
