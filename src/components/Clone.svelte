@@ -71,6 +71,7 @@
         // Use Tauri's clipboard API to read text
         const clipboardText = await readText();
 
+        console.debug("start repoInput.dispatchEvent debug");
         // console.log("repoInput before dispatch:", repoInput); // Debugging log
         // console.log(typeof repoInput); // Should be "object" (an HTMLInputElement)
         // console.log(repoInput instanceof HTMLInputElement); // Should be true
@@ -81,6 +82,7 @@
         // } else {
         //   console.log("repoInput is assigned!");
         // }
+        console.debug("end repoInput.dispatchEvent debug");
 
         if (
           (clipboardText.startsWith("https") ||
@@ -102,15 +104,11 @@
         console.error("Failed to read clipboard contents:", err);
       }
 
-      setTimeout(
-        () => 
-        {
-          console.log("readdig");
-          window.addEventListener("focus", clipboardToRepoInput);
-          isFocusHandled = false;
-        },
-        1000,
-      );
+      setTimeout(() => {
+        console.log("readdig");
+        window.addEventListener("focus", clipboardToRepoInput);
+        isFocusHandled = false;
+      }, 1000);
     };
 
     // Add the focus event listener when the component mounts
@@ -236,16 +234,32 @@
   <form id="git-clone-form" on:submit|preventDefault={generateCommand}>
     <div class="form-row">
       <label title="<repo>">
-        Repository
-        <input
-          bind:this={repoInput}
-          bind:value={form.repo}
-          type="text"
-          name="repo"
-          placeholder="<repo>"
-          on:input={handleRepoInput}
-        />
-        <span class="help" title="The repository to clone.">?</span>
+        <div class="editable-dropdown">
+          Repository
+          <input
+            bind:this={repoInput}
+            bind:value={form.repo}
+            type="text"
+            name="repo"
+            placeholder="<repo>"
+            list="repo-options"
+            on:input={handleRepoInput}
+          />
+          <datalist id="repo-options">
+            <!-- TODO: The values here should be populated onMount by a js call to the backend and load the history file -->
+            <option value="R 1"></option>
+            <option value="Re 2"></option>
+            <option value="Rep 3"></option>
+            <option value="Repo 4"></option>
+            <option value="Repos 5"></option>
+            <option value="Reposi 6"></option>
+            <option value="Reposit 7"></option>
+            <option value="Reposito 8"></option>
+            <option value="Repositor 9"></option>
+            <option value="Repository 10"></option>
+          </datalist>
+          <span class="help" title="The repository to clone.">?</span>
+        </div>
       </label>
       <button
         on:click={openFolderExplorer}
@@ -254,7 +268,6 @@
       >
         Browse
       </button>
-      <!-- <FolderExplorerButton display-text="Browse" type="button" /> -->
     </div>
 
     <div class="form-row">
