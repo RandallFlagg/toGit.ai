@@ -130,6 +130,15 @@
     console.log("exiting clone onMount");
   });
 
+  $: if (form.repo) {
+    if (form.repo.endsWith(".git")) {
+      const repoName = getRepoName(form.repo);
+      if (!form.dir.endsWith(repoName)) {
+        form.dir = `${form.dir.replace(/\/[^/]*$/, "")}/${repoName}`;
+      }
+    }
+  }
+
   const getRepoName = (url) => {
     const parts = url.split("/");
     const repoWithGit = parts[parts.length - 1];
@@ -171,10 +180,10 @@
   const handleRepoInput = (event) => {
     const url = typeof event === "string" ? event : event.target.value;
     if (url.endsWith(".git")) {
-      const result = getRepoName(url);
+      // const result = getRepoName(url);
       // if (!form.repo.includes(result)) {
       // form.dir = form.dir + result;
-      form.dir += result;
+      // form.dir += result;
       // }
     }
   };
