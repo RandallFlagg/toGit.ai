@@ -8,7 +8,7 @@
   // import FolderExplorerButton from './FolderExplorerButton.svelte';
 
   let commandOutput = "";
-  let repoInput;
+
   let form = {
     verbose: false,
     quiet: false,
@@ -71,33 +71,12 @@
         // Use Tauri's clipboard API to read text
         const clipboardText = await readText();
 
-        console.debug("start repoInput.dispatchEvent debug");
-        // console.log("repoInput before dispatch:", repoInput); // Debugging log
-        // console.log(typeof repoInput); // Should be "object" (an HTMLInputElement)
-        // console.log(repoInput instanceof HTMLInputElement); // Should be true
-        // console.log("repoInput prototype:", Object.getPrototypeOf(repoInput));
-        // console.log("repoInput methods:", Object.keys(repoInput.__proto__));
-        // if (!repoInput) {
-        //   console.error("repoInput is not assigned!");
-        // } else {
-        //   console.log("repoInput is assigned!");
-        // }
-        console.debug("end repoInput.dispatchEvent debug");
-
         if (
           (clipboardText.startsWith("https") ||
             clipboardText.startsWith("git@")) &&
           clipboardText.endsWith(".git")
         ) {
-          repoInput = clipboardText;
           form.repo = clipboardText;
-          if (repoInput.dispatchEvent) {
-            // Manually dispatch an input event to ensure `handleRepoInput` is called
-            const event = new Event("input", { bubbles: true });
-            repoInput.dispatchEvent(event);
-          } else {
-            handleRepoInput(clipboardText);
-          }
         }
       } catch (err) {
         debugger;
@@ -124,8 +103,6 @@
     // console.log('Current Working Directory:', currentDir);
     form.dir = await getCWD(true);
     debugLog("Launch Path:", form.dir);
-
-    // clipboardToRepoInput();
 
     console.log("exiting clone onMount");
   });
@@ -174,17 +151,6 @@
       }
     } catch (error) {
       console.error("Error opening folder explorer:", error);
-    }
-  };
-
-  const handleRepoInput = (event) => {
-    const url = typeof event === "string" ? event : event.target.value;
-    if (url.endsWith(".git")) {
-      // const result = getRepoName(url);
-      // if (!form.repo.includes(result)) {
-      // form.dir = form.dir + result;
-      // form.dir += result;
-      // }
     }
   };
 
@@ -246,13 +212,11 @@
         <div class="editable-dropdown">
           Repository
           <input
-            bind:this={repoInput}
             bind:value={form.repo}
             type="text"
             name="repo"
             placeholder="<repo>"
             list="repo-options"
-            on:input={handleRepoInput}
           />
           <datalist id="repo-options">
             <!-- TODO: The values here should be populated onMount by a js call to the backend and load the history file -->
