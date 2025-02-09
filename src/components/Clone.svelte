@@ -211,6 +211,7 @@
       <label title="<repo>">
         <div class="editable-dropdown">
           Repository
+          <span class="help" title="The repository to clone.">?</span>
           <input
             bind:value={form.repo}
             type="text"
@@ -231,7 +232,6 @@
             <option value="Repositor 9"></option>
             <option value="Repository 10"></option>
           </datalist>
-          <span class="help" title="The repository to clone.">?</span>
         </div>
       </label>
       <button
@@ -246,13 +246,13 @@
     <div class="form-row">
       <label title="<dir>">
         Directory
+        <span class="help" title="The directory to clone into.">?</span>
         <input
           bind:value={form.dir}
           type="text"
           name="dir"
           placeholder="<dir>"
         />
-        <span class="help" title="The directory to clone into.">?</span>
       </label>
       <button
         on:click={openFolderExplorer}
@@ -648,7 +648,9 @@
 
 <style>
   .container {
-    /* Add your CSS styles here */
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
   }
 
   .back-link {
@@ -656,30 +658,85 @@
     color: blue;
   }
 
+  .details {
+    margin-top: 20px;
+    width: 100%;
+  }
+
+  .details summary {
+    cursor: pointer;
+    font-weight: bold;
+  }
+
   .help {
     cursor: help;
     font-weight: bold;
+    margin-left: 5px;
   }
 
   .form-row {
     display: flex;
-    align-items: center;
     gap: 10px;
-    /* Adjust the gap between elements within the same row */
-    margin-bottom: 0px;
+    margin-bottom: 10px;
+    width: 100%;
+    background-color: brown;
     /* Add space between rows */
+    /* display: grid; */
+    /* grid-template-columns: auto auto 1fr auto; */
+    /* align-items: center; */
+    /* Adjust the gap between elements within the same row */
   }
 
-  .form-row:last-child {
-    justify-content: flex-start;
-    /* Align the submit button to the start */
+  /*.form-row:last-child {
+    justify-content: flex-start; /* Align the submit button to the start */ /*
+  }*/
+
+  .form-row label {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    max-width: 100%;
+    /* width: 150px; */
+    /*
+    max-width: 700px;
+    width: 700px;
+    justify-content: end;
+    width: auto;
+    text-align: justify;
+    flex: 0 0 100%;
+    margin-right: 10px;
+    background-color: #0056b3;
+    */
   }
 
-  .form-row button {
-    margin: 0;
+  /* .editable-dropdown, */
+  .form-row input[type="text"] {
+    flex-grow: 1;
+    min-width: 450px;
+    max-width: 1000px;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-sizing: border-box;
+    /* margin-right: 10px; */
+    /* width: 100%; */
+    /* flex: 1; */
+    /* max-width: 500px; */
   }
 
-  .details {
-    margin-top: 20px;
+  .explorer-button {
+    padding: 8px 12px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    /* align-self: stretch; Ensures the button stretches to match the input height */
+    height: 100%;
+  }
+
+  .explorer-button:hover {
+    background-color: #0056b3;
   }
 </style>
