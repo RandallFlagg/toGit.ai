@@ -1,6 +1,6 @@
 <script>
   import { onMount, onDestroy } from "svelte";
-  import { writable } from "svelte/store";
+  // import { writable } from "svelte/store";
   import { writeText, readText } from "@tauri-apps/plugin-clipboard-manager";
   import { link } from "svelte-spa-router";
   import { path } from "@tauri-apps/api"; // /path
@@ -497,11 +497,14 @@
           <option value="reftable">reftable</option>
         </select>
         <span class="help" title="Specify the reference format to use.">?</span>
-      </label><br />
+      </label>
     </details>
-    <button type="submit" class="form-row" style="margin-top: 20px;">
-      Generate Command
-    </button>
+
+    <div class="form-row">
+      <button type="submit" style="margin-top: 20px;"><!--TODO: Remove inline style from all elements-->
+        Generate Command
+      </button>
+    </div>
   </form>
   <pre id="command-output">{commandOutput}</pre>
 
@@ -679,7 +682,7 @@
     gap: 10px;
     margin-bottom: 10px;
     width: 100%;
-    background-color: brown;
+    /* background-color: brown; */
     /* Add space between rows */
     /* display: grid; */
     /* grid-template-columns: auto auto 1fr auto; */
@@ -713,7 +716,7 @@
   /* .editable-dropdown, */
   .form-row input[type="text"] {
     flex-grow: 1;
-    min-width: 450px;
+    min-width: 650px;
     max-width: 1000px;
     padding: 8px;
     border: 1px solid #ccc;
