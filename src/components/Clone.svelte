@@ -154,6 +154,10 @@
     }
   };
 
+  const clone = async () => {
+    const clone = await window.__TAURI__.core.invoke('clone', {url: form.repo, path: form.dir, depth: form.depth, recursive: form.recurseSubmodules});
+  };
+
   const generateCommand = () => {
     let command = "git clone";
 
@@ -167,7 +171,7 @@
     if (form.local) command += " --local";
     if (form.noHardlinks) command += " --no-hardlinks";
     if (form.shared) command += " --shared";
-    if (form.recurseSubmodules) command += " --recurse-submodules";
+    if (form.recurseSubmodules) command += " --recurse-submodules"; //This is equivalent to running git submodule update --init --recursive <pathspec> immediately after the clone is finished.
 
     if (form.jobs) command += ` --jobs=${form.jobs}`;
     if (form.template) command += ` --template=${form.template}`;
@@ -199,6 +203,8 @@
     if (form.dir) command += ` ${form.dir}`;
 
     commandOutput = command;
+
+    clone();
   };
 </script>
 
@@ -501,7 +507,8 @@
     </details>
 
     <div class="form-row">
-      <button type="submit" style="margin-top: 20px;"><!--TODO: Remove inline style from all elements-->
+      <button type="submit" style="margin-top: 20px;"
+        ><!--TODO: Remove inline style from all elements-->
         Generate Command
       </button>
     </div>

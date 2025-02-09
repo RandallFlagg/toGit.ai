@@ -40,6 +40,7 @@ use crate::git_frontend::git_frontend_module::commit;
 use crate::git_frontend::git_frontend_module::get_file_content;
 use crate::git_frontend::git_frontend_module::get_repo_status;
 use crate::git_frontend::git_frontend_module::is_git_repo;
+use crate::git_frontend::git_frontend_module::clone;
 
 // use notify::{DebouncedEvent, RecursiveMode, Watcher};
 // use std::sync::mpsc::{channel, Receiver};
@@ -113,9 +114,22 @@ fn main() -> Result<(), GitFrontendError> {
     //     }
     // }
     main_tauri();
+    // main_clone();
 
     //Ok("SUCCESS".to_string())
     Ok(())
+}
+
+fn main_clone() {
+    let url = "https://github.com/OpenImageViewer/OpenImageViewer.git";
+    let path = Path::new("/media/DATA/Ohad/Projects/toGit.ai/TAURI/DEL/AAA50");
+    let depth = 50; // Set the depth of the clone
+    let recursive = true; // Set this flag to true or false to choose recursive clone
+
+    match clone(url, path, depth, recursive) {
+        Ok(_) => println!("Repository cloned successfully!"),
+        Err(e) => println!("Failed to clone repository: {}", e),
+    }
 }
 
 //TODO: Write a whole scenario to be able to test all the changes. Write it in TDD.

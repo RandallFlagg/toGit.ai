@@ -3,7 +3,7 @@ use binaryornot::is_binary;
 // use chrono::{DateTime, Utc};
 // use file_format::FileFormat;
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-use git2::{Commit, DiffFormat, DiffOptions, Error, IndexAddOption, Repository, Signature, Status};
+use git2::{Commit, DiffFormat, DiffOptions, Error, FetchOptions, IndexAddOption, RemoteCallbacks, Repository, RepositoryInitOptions, Signature, Status, SubmoduleUpdateOptions};
 // use libgit2_sys::{git_repository, git_repository};
 use infer;
 // use lazy_static::lazy_static;
@@ -49,12 +49,11 @@ pub fn commit(message: &str, signer_name: &str, signer_email: &str) -> Result<St
     // Open the repository
     let repo = Repository::open(repo_path)?;
 
-    
     // Get the index and add all files to it
     let mut index = repo.index()?;
     println!("AAA3");
     // Commit the changes
-    
+
     println!("AAA2");
     //TODO: handle signature logic
     // Create a signature for the committer
@@ -651,13 +650,96 @@ pub fn is_git_repo(path: Option<PathBuf>) -> bool {
 }
 
 //TODO: This is for file watcher. In logic moduile we have more code
+// #[tauri::command]
+// fn trigger_event(app: AppHandle) {
+//     app.emit("custom-event", &"Hello from Rust!").unwrap();
+// }
+
 #[tauri::command]
-fn trigger_event(app: AppHandle) {
-    app.emit("custom-event", &"Hello from Rust!").unwrap();
+pub fn clone(url: &str, path: &Path, depth: usize, recursive: bool) -> Result<Repository, git2::Error> {
+    println!("Cloning repository with Git: {}", url);
+    println!("Cloning into: {}", path.to_string_lossy());
+    println!("Recursive: {}", recursive);
+
+    //TODO: This is in case we want to make sure we can clone a repo with a specific depth
+    // Check if the repository path already exists
+    // if path.exists() {
+    //     println!("Path already exists. Removing it...");
+    //     fs::remove_dir_all(path).expect("Failed to remove existing directory");
+    // }
+
+    // let repo;
+    // // Clone the repository with the specified URL and into the specified path
+    // if recursive {
+    //     repo = Repository::clone_recurse(url, path);
+    // } else {
+    //     repo = Repository::clone(url, path);
+    // }
+    //TODO: add an option to handle a case where low depth is not enough
+    let mut fetch_options = FetchOptions::new();
+    let callbacks = RemoteCallbacks::new();
+
+    fetch_options.remote_callbacks(callbacks);
+    if depth > 0 {
+        fetch_options.depth(i32::try_from(depth).unwrap()); // Set the clone depth here
+    }
+
+    let mut builder = git2::build::RepoBuilder::new();
+    builder.fetch_options(fetch_options);
+
+    let repo = builder.clone(url, path)?;
+
+    println!("AAAA");
+    //TODO: Catch a case where cloning with low depth fails - OIV test case
+    if recursive {
+        // Create new FetchOptions for submodule updates
+        let mut submodule_fetch_options = FetchOptions::new();
+        if depth > 0 {
+            submodule_fetch_options.depth(i32::try_from(depth).unwrap());
+        }
+
+        let mut submodule_options = SubmoduleUpdateOptions::new();
+        submodule_options.fetch(submodule_fetch_options); // Set fetch options for submodules
+        println!("BBBB");
+        for mut submodule in repo.submodules()? {
+            submodule.init(true)?;
+            submodule.update(true, Some(&mut submodule_options))?;
+        }
+    }
+
+    println!("Repository cloned successfully!");
+
+    Ok(repo)
+    // repo
 }
 
 //TODO: Functions from here can be deleted?
 /*
+fn clone_repo_with_git(url: &str, path: &Path, ref_format: RepositoryInitFlag) -> Result<Repository, git2::Error> {
+    let a  = Repository::clone(url, into);
+    let ref_format = if use_reftable_format {
+        RepositoryInitFlag::REFTABLE
+    } else {
+        RepositoryInitFlag::REFS
+    };
+
+    let mut fetch_options = FetchOptions::new();
+    let mut callbacks = RemoteCallbacks::new();
+
+    fetch_options.remote_callbacks(callbacks);
+
+    let mut init_options = RepositoryInitOptions::new();
+    init_options.flags(ref_format);
+
+    let repo = Repository::init_opts(path, &init_options)?;
+    let remote = repo.remote("origin", url)?;
+*/
+//remote.fetch(&["refs/heads/*:refs/remotes/origin/*"], Some(&mut fetch_options), None)?;
+/* repo.find_reference("refs/remotes/origin/main")?.set_target(repo.head()?.target().unwrap(), "clone")?;
+
+    Ok(repo)
+}
+
 fn get_repo_tracked() -> Result<Vec<FileMetadata>, GitFrontendError> {
     let config = CONFIG.get().unwrap().lock().unwrap();
     let repo_path = config.repo_path_as_path();
