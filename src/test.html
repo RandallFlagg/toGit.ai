@@ -1,5 +1,6 @@
 <!doctype html>
 <html lang="en-us">
+
   <head>
     <meta charset="utf-8" />
     <!-- Make sure to load the highlight.js CSS file before the Diff2Html CSS file -->
@@ -9,11 +10,7 @@
       type="text/css"
       href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css"
     /> -->
-    <link
-      rel="stylesheet"
-      type="text/css"
-      href="assets/diff2html.min.css"
-    />
+    <link rel="stylesheet" type="text/css" href="assets/diff2html.min.css" />
     <!-- <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html-ui.min.js"></script> -->
     <script type="text/javascript" src="assets/diff2html-ui.min.js"></script>
   </head>
@@ -51,6 +48,28 @@ index 345e6ae..0baa582 100644
 +And another one`;
 
     document.addEventListener('DOMContentLoaded', function () {
+      document.getElementById('pasteButton').addEventListener('click', async () => {
+        try {
+          const text = await navigator.clipboard.readText();
+          debugger;
+          if (text) {
+            document.getElementById('myInput').value = text;
+          } else {
+            alert('Clipboard is empty or does not contain text.');
+          }
+        } catch (err) {
+          debugger;
+          switch (err.name) {
+            case "NotAllowedError":
+              console.error('Not Allowed: Failed to read clipboard contents:', err);
+              break;
+            default:
+              console.error('Failed to read clipboard contents:', err);
+              break;
+          }
+        }
+      });
+
       var targetElement = document.getElementById('myDiffElement');
       var configuration = {
         drawFileList: true,
@@ -67,8 +86,13 @@ index 345e6ae..0baa582 100644
       diff2htmlUi.draw();
       diff2htmlUi.highlightCode();
     });
+
   </script>
+
   <body>
     <div id="myDiffElement"></div>
+    <input type="text" id="myInput" placeholder="Paste text here">
+    <button id="pasteButton">Check Clipboard</button>
   </body>
+
 </html>

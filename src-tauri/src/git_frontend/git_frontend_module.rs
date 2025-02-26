@@ -28,6 +28,8 @@ use tauri::{path, App, AppHandle, Emitter};
 
 use crate::components::file_metadata::FileMetadata;
 use crate::components::git_frontend_error::GitFrontendError;
+use crate::components::repo_details::RemoteDetails;
+use crate::components::repo_details::RepoDetails;
 use crate::git_frontend::app_config::AppConfig;
 // #[macro_use]
 // extern crate lazy_static;
@@ -432,12 +434,12 @@ fn get_git_data(repo_path: String) -> Result<String, String> {
     unimplemented!("This function is not yet implemented.");
 }
 
-#[tauri::command]
-fn show_menu() -> Vec<&'static str> {
-    // println!("Showing Menu");
-    // vec!["Hello", "Hi", "Hey"]
-    unimplemented!("This function is not yet implemented.");
-}
+// #[tauri::command]
+// fn show_menu() -> Vec<&'static str> {
+//     // println!("Showing Menu");
+//     // vec!["Hello", "Hi", "Hey"]
+//     unimplemented!("This function is not yet implemented.");
+// }
 
 fn get_file_metadata<P: AsRef<Path>>(full_file_path: P, status: &str, repo_root: &Path) -> Result<FileMetadata, GitFrontendError> {
     let path_ref: &Path = full_file_path.as_ref();
@@ -656,7 +658,7 @@ pub fn is_git_repo(path: Option<PathBuf>) -> bool {
 // }
 
 #[tauri::command]
-pub fn clone(url: &str, path: &Path, depth: usize, recursive: bool) -> Result<Repository, git2::Error> {
+pub fn clone(url: &str, path: &Path, depth: usize, recursive: bool) -> Result<String, GitFrontendError> {
     println!("Cloning repository with Git: {}", url);
     println!("Cloning into: {}", path.to_string_lossy());
     println!("Recursive: {}", recursive);
@@ -709,8 +711,114 @@ pub fn clone(url: &str, path: &Path, depth: usize, recursive: bool) -> Result<Re
 
     println!("Repository cloned successfully!");
 
-    Ok(repo)
+    // Ok(repo)
+    Ok("Repository cloned successfully".to_string())
     // repo
+}
+
+#[tauri::command]
+pub(crate) fn set_repo_details(details: RepoDetails) -> Result<String, Error> {
+    Ok("".to_string())
+}
+
+#[tauri::command]
+pub(crate) fn get_repo_details() -> Result<RepoDetails, GitFrontendError> {
+    let config = CONFIG.get().unwrap().lock().unwrap();
+    let repo_path = config.repo_path_as_path();
+    let repo = Repository::open(repo_path)?;
+
+    // Repository name (assuming the directory name as repo name)
+    let repo_name = repo_path.to_str().unwrap().split('/').last().unwrap_or("").to_string();
+
+    // Repository description (read from .git/description if available)
+    let description = repo.path().parent().and_then(|path| std::fs::read_to_string(path.join("description")).ok());
+
+    // Repository URL (read from .git/config)
+    let config = repo.config()?;
+    let remote_url = config.get_string("remote.origin.url").unwrap_or_else(|_| "No URL found".to_string());
+
+    let mut remotes = Vec::new();
+    // debug!("repo Remotes: {:?}",repo.remotes().unwrap());
+    debug!("repo Remotes sizes: {}",repo.remotes()?.len());
+    for remote_name in repo.remotes()?.iter().flatten() {
+        let remote = repo.find_remote(remote_name)?;
+        
+        // let fetch_refspecs: Vec<String> = remote.fetch_refspecs()
+        //     .iter()
+        //     .map(|spec| spec.to_str().unwrap_or("Invalid refspec").to_string())
+        //     .collect();
+
+        // let fetch_refspecs: Vec<String> = remote.fetch_refspecs().iter().filter_map(|spec| spec.ok()).map(|spec| spec.to_string()).collect();
+
+        // let fetch_refspecs: Vec<String> = remote.fetch_refspecs()
+        //     .iter()
+        //     .map(|spec| spec.to_string())
+        //     .collect();
+
+        let mut fetch_refspecs: Vec<String> = vec![];
+        let fetch_refspecs2/*: Vec<String>*/ = remote.fetch_refspecs().unwrap();
+        println!("The refspecs2 size is: {}",fetch_refspecs2.len());
+        // Iterate over the fetch refspecs
+        for refspec in fetch_refspecs2.iter() {
+            //if let Some(spec) = refspec.ok() {
+            //if 
+            let spec = refspec.ok_or("Invalid refspec").unwrap();// {
+                println!("{}", spec);
+                fetch_refspecs.push(spec.to_string());
+            // } else {
+            //     println!();
+            // }
+        }
+
+        // println!("The refspecs size is: {}",fetch_refspecs.len());
+        let remote_details = RemoteDetails {
+            name: remote_name.to_string(),
+            url: remote.url().unwrap_or("No URL found").to_string(),
+            push_url: remote.pushurl().map(|url| url.to_string()),
+            fetch: fetch_refspecs, //todo!("fetch_refspecs", fetch_refspecs), // fetch_refspecs,
+        };
+        debug!("remote_details end");
+        remotes.push(remote_details);
+    }
+
+    // let remotes2 = repo.remotes()?.iter().filter_map(|name| name.map(String::from)).collect::<Vec<_>>();
+
+    let branches = repo
+        .branches(None)?
+        .filter_map(|branch| branch.ok())
+        .filter_map(|(branch, _)| branch.name().ok().flatten().map(|name| name.to_string()))
+        .collect::<Vec<_>>();
+
+    let head = repo.head()?;
+
+    // Get shorthand name
+    let default_branch_name = head.shorthand().unwrap_or("No branch found").to_string();
+
+    // Get full reference name
+    let default_full_branch_name = head.name().unwrap_or("No branch found").to_string();
+
+    let tags = repo.tag_names(None)?.iter().filter_map(|name| name.map(String::from)).collect::<Vec<_>>();
+
+    Ok(RepoDetails {
+        name: repo_name,
+        description,
+        url: remote_url,
+        remotes: remotes,
+        branches,
+        tags,
+        contributors: vec![],              // git2 does not provide contributor information directly
+        forks: 0,                          // git2 does not provide fork information
+        stars: 0,                          // git2 does not provide star information
+        language: "Unknown".to_string(),   // git2 does not provide repository language information
+        size: 0,                           // git2 does not provide repository size information
+        created_at: "Unknown".to_string(), // git2 does not provide creation date information
+        updated_at: "Unknown".to_string(), // git2 does not provide update date information
+        default_branch_name,
+        default_full_branch_name,
+        default_push_remote: "origin".to_string(), // Assuming "origin" as default push remote
+        default_pull_remote: "origin".to_string(), // Assuming "origin" as default pull remote
+        git_settings: vec![],                      // Placeholder, git2 does not provide detailed settings
+    })
 }
 
 //TODO: Functions from here can be deleted?

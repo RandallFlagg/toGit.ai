@@ -6,6 +6,7 @@
 import IndexPage from '../components/IndexPage.svelte';
 import Clone from '../components/Clone.svelte';
 import Commit from '../components/Commit.svelte';
+import Settings from '../components/RepositorySettings.svelte';
 // import DiffViewer from './components/DiffViewer.svelte';
 // import MyCounter from './components/MyCounter.svelte';
 // import DebugWindow from './components/DebugWindow.svelte';
@@ -13,10 +14,11 @@ import Commit from '../components/Commit.svelte';
 
 const routes = {
     // Exact path
-    '/': Clone,
+    '/': Settings,
     "/commit" : Commit,
     "/clone": Clone,
     '/index': IndexPage,
+    '/setting': Settings,
     // '/counter': MyCounter
     // Using named parameters, with last being optional
     // '/author/:first/:last?': Author,

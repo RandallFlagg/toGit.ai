@@ -36,11 +36,12 @@ mod logic;
 use crate::components::git_frontend_error::GitFrontendError;
 use crate::git_frontend::app_config::AppConfig;
 use crate::git_frontend::git_frontend_module::change_file_status;
+use crate::git_frontend::git_frontend_module::clone;
 use crate::git_frontend::git_frontend_module::commit;
 use crate::git_frontend::git_frontend_module::get_file_content;
+use crate::git_frontend::git_frontend_module::get_repo_details;
 use crate::git_frontend::git_frontend_module::get_repo_status;
 use crate::git_frontend::git_frontend_module::is_git_repo;
-use crate::git_frontend::git_frontend_module::clone;
 
 // use notify::{DebouncedEvent, RecursiveMode, Watcher};
 // use std::sync::mpsc::{channel, Receiver};
@@ -51,6 +52,23 @@ use crate::git_frontend::git_frontend_module::clone;
 #[tauri::command]
 fn get_launch_path() -> String {
     env::current_dir().unwrap().to_str().unwrap().to_string()
+}
+
+fn main_repo_details() {
+    // let repo_path = PathBuf::from("../../TEST REPO");
+    let repo_path = PathBuf::from("/media/DATA/Ohad/Projects/OIV/OIV/");
+
+    if is_git_repo(Some(repo_path)) {
+        println!("It is a git repo");
+    } else {
+        println!("It is not a git repo");
+        exit(0);
+    }
+
+    match get_repo_details() {
+        Ok(details) => println!("{:?}", details),
+        Err(e) => eprintln!("Error: {}", e),
+    }
 }
 
 fn main() -> Result<(), GitFrontendError> {
@@ -114,6 +132,7 @@ fn main() -> Result<(), GitFrontendError> {
     //     }
     // }
     main_tauri();
+    // main_repo_details();
     // main_clone();
 
     //Ok("SUCCESS".to_string())
@@ -270,7 +289,8 @@ fn main_tauri() {
     // #[cfg(all(debug_assertions, feature = "testing"))]
     #[cfg(debug_assertions)]
     //TODO: Remove the following code and the mut from path. For develpment purpose only.
-    let repo_path = PathBuf::from("../../TEST REPO");
+    // let repo_path = PathBuf::from("../../TEST REPO");
+    let repo_path = PathBuf::from("/media/DATA/Ohad/Projects/OIV/OIV/");
 
     if is_git_repo(Some(repo_path)) {
         println!("It is a git repo");
@@ -314,11 +334,13 @@ fn main_tauri() {
         // Authentication State: Keep track of user authentication status and related information.
         .manage(AppConfig::default())
         .invoke_handler(tauri::generate_handler![
-            get_repo_status,
-            get_file_content,
             change_file_status,
+            clone,
             commit,
-            get_launch_path
+            get_file_content,
+            get_launch_path,
+            get_repo_status,
+            get_repo_details
             //get_git_data,
             //show_menu
             // read_clipboard_text

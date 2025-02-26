@@ -116,6 +116,8 @@
     }
   }
 
+  $: isButtonDisabled = form.repo === "" && form.dir === "";
+
   const getRepoName = (url) => {
     const parts = url.split("/");
     const repoWithGit = parts[parts.length - 1];
@@ -155,7 +157,12 @@
   };
 
   const clone = async () => {
-    const clone = await window.__TAURI__.core.invoke('clone', {url: form.repo, path: form.dir, depth: form.depth, recursive: form.recurseSubmodules});
+    const clone = await window.__TAURI__.core.invoke("clone", {
+      url: form.repo,
+      path: form.dir,
+      depth: form.depth,
+      recursive: form.recurseSubmodules,
+    });
   };
 
   const generateCommand = () => {
@@ -507,7 +514,10 @@
     </details>
 
     <div class="form-row">
-      <button type="submit" style="margin-top: 20px;"
+      <button
+        type="submit"
+        style="margin-top: 20px;"
+        disabled={isButtonDisabled}
         ><!--TODO: Remove inline style from all elements-->
         Generate Command
       </button>
