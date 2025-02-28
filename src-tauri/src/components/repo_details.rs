@@ -3,19 +3,23 @@ use serde::Serialize;
 #[derive(Debug, Serialize)]
 pub struct RemoteDetails {
     pub name: String,
-    pub url: String,
-    pub push_url: Option<String>,
-    pub fetch: Vec<String>,
+    pub fetch_url: String,
+    pub push_url: String,
+    pub push_refspecs: Vec<String>,
+    pub fetch_refspecs: Vec<String>,
+    pub local_branches_configured_for_git_pull: Vec<String>,
+    pub local_branches_configured_for_git_push: Vec<String>,
+    pub remote_branches: Vec<String>,
 }
 
 #[derive(Debug, Serialize)]
 pub(crate) struct RepoDetails {
     //TODO: Fix visability
-    pub name: String,
+    // pub name: String,
     pub description: Option<String>,
-    pub url: String,
+    // pub url: String,
     pub remotes: Vec<RemoteDetails>,
-    pub branches: Vec<String>,
+    // pub branches: Vec<String>,
     pub tags: Vec<String>,
     pub default_branch_name: String,
     pub default_full_branch_name: String,

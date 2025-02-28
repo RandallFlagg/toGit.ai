@@ -3,7 +3,10 @@ use binaryornot::is_binary;
 // use chrono::{DateTime, Utc};
 // use file_format::FileFormat;
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-use git2::{Commit, DiffFormat, DiffOptions, Error, FetchOptions, IndexAddOption, RemoteCallbacks, Repository, RepositoryInitOptions, Signature, Status, SubmoduleUpdateOptions};
+use git2::{
+    BranchType, Commit, Config, DiffFormat, DiffOptions, Error, FetchOptions, IndexAddOption, RemoteCallbacks, Repository, RepositoryInitOptions, Signature, Status,
+    SubmoduleUpdateOptions, Time,
+};
 // use libgit2_sys::{git_repository, git_repository};
 use infer;
 // use lazy_static::lazy_static;
@@ -19,6 +22,7 @@ use std::io::Read;
 // use std::ops::ControlFlow;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{LazyLock, Mutex, OnceLock};
+use std::time::{Duration, SystemTime};
 // use std::time::SystemTime;
 use std::{
     io,
@@ -721,6 +725,174 @@ pub(crate) fn set_repo_details(details: RepoDetails) -> Result<String, Error> {
     Ok("".to_string())
 }
 
+fn find_default_remote(config: &Config, key: &str) -> Option<String> {
+    config.get_string(key).ok()
+}
+
+fn list_branches_for_remote(repo: &Repository, remote_name: &str, direction: &str) -> Result<Vec<String>, Error> {
+    let mut results = Vec::new();
+    let branches = repo.branches(Some(BranchType::Local))?;
+    for branch in branches {
+        let (branch, _) = branch?;
+        let name = branch.name()?.unwrap_or_default().to_string();
+        let branch_remote = repo.config()?.get_string(&format!("branch.{}.remote", name)).unwrap_or_default();
+        debug!("1");
+        if branch_remote == remote_name {
+            let merge_or_push = match direction {
+                "pull" => repo.config()?.get_string(&format!("branch.{}.merge", name)).unwrap_or_default(),
+                "push" => repo.config()?.get_string(&format!("branch.{}.push", name)).unwrap_or_default(),
+                _ => String::new(),
+            };
+            debug!("2");
+            if direction == "pull" && !merge_or_push.is_empty() {
+                debug!("3");
+                let rebase = repo.config()?.get_bool(&format!("branch.{}.rebase", name)).unwrap_or(false);
+                if rebase {
+                    results.push(format!(
+                        "{}      rebases onto remote {}",
+                        name,
+                        merge_or_push.strip_prefix("refs/heads/").unwrap_or(&merge_or_push)
+                    ));
+                } else {
+                    results.push(format!(
+                        "{}      merges with remote {}",
+                        name,
+                        merge_or_push.strip_prefix("refs/heads/").unwrap_or(&merge_or_push)
+                    ));
+                }
+            } else if direction == "push" && !merge_or_push.is_empty() {
+                debug!("3");
+                let is_up_to_date = check_if_up_to_date(repo, &name, &merge_or_push)?;
+                debug!("3.1");
+                let status = if is_up_to_date { "up to date" } else { "needs update" };
+                debug!("3.2");
+                results.push(format!(
+                    "{}      pushes to {}    ({})",
+                    name,
+                    merge_or_push.strip_prefix("refs/heads/").unwrap_or(&merge_or_push),
+                    status
+                ));
+                debug!("3.3");
+            }
+        }
+    }
+    Ok(results)
+}
+
+fn list_remote_branches(repo: &Repository, remote_name: &str) -> Result<Vec<String>, Error> {
+    let mut results = Vec::new();
+    let branches = repo.branches(Some(BranchType::Remote))?;
+    for branch in branches {
+        let (branch, _) = branch?;
+        let name = branch.name()?.unwrap_or_default().to_string();
+
+        if name.starts_with(&format!("{}/", remote_name)) {
+            let commit = branch.get().peel_to_commit()?;
+            let commit_time = commit.time();
+            let commit_age = get_commit_age(commit_time);
+            let tracking_branch = find_tracking_branch(repo, &name)?;
+            let last_commit_message = commit.message().unwrap_or("No commit message").to_string();
+            let last_commit_author = commit.author().name().unwrap_or("Unknown author").to_string();
+            let is_merged = is_branch_merged(repo, &name)?;
+
+            if let Some(tracking) = tracking_branch {
+                results.push(format!("{}      last updated {}    tracked by {}", name, commit_age, tracking));
+            } else {
+                results.push(format!("{}      last updated {}", name, commit_age));
+            }
+            results.push(format!("    Last commit: {}", last_commit_message));
+            results.push(format!("    Author: {}", last_commit_author));
+            results.push(format!("    Merged: {}", is_merged));
+        }
+    }
+    Ok(results)
+}
+
+fn find_tracking_branch(repo: &Repository, remote_branch_name: &str) -> Result<Option<String>, Error> {
+    let branches = repo.branches(Some(BranchType::Local))?;
+    for branch in branches {
+        let (branch, _) = branch?;
+        let name = branch.name()?.unwrap_or_default().to_string();
+        let merge = repo.config()?.get_string(&format!("branch.{}.merge", name)).unwrap_or_default();
+
+        // Debug prints to understand the issue
+        println!("Checking if local branch '{}' merges with remote branch '{}'", name, remote_branch_name);
+        println!("Local branch merge ref: '{}'", merge);
+        println!("Remote branch name: '{}'", remote_branch_name);
+
+        let remote_branch_stripped = remote_branch_name.strip_prefix(&format!("{}/", branch_remote(remote_branch_name)?)).unwrap_or(remote_branch_name);
+
+        if merge.ends_with(remote_branch_stripped) {
+            return Ok(Some(name));
+        }
+    }
+    Ok(None)
+}
+
+fn branch_remote(remote_branch_name: &str) -> Result<&str, Error> {
+    let parts: Vec<&str> = remote_branch_name.split('/').collect();
+    if parts.len() > 1 {
+        Ok(parts[0])
+    } else {
+        Err(Error::from_str("Invalid remote branch name"))
+    }
+}
+
+fn check_if_up_to_date(repo: &Repository, branch_name: &str, remote_branch_ref: &str) -> Result<bool, Error> {
+    debug!("check_if_up_to_date enter");
+    if remote_branch_ref.is_empty() {
+        return Err(Error::from_str("Remote branch reference is empty."));
+    }
+
+    let branch = repo.find_branch(branch_name, BranchType::Local)?;
+    debug!("0.1");
+    let branch_commit = branch.get().peel_to_commit()?;
+    debug!("0.2");
+    let branch_oid = branch_commit.id();
+    debug!("0.3");
+
+    // Check if the remote branch reference is valid and exists
+    let remote_branch = match repo.revparse_single(remote_branch_ref) {
+        Ok(branch) => branch,
+        Err(e) => {
+            println!("Failed to resolve remote branch ref '{}': {}", remote_branch_ref, e);
+            return Err(Error::from_str(&format!("Failed to resolve remote branch ref '{}': {}", remote_branch_ref, e)));
+        }
+    };
+    debug!("0.4");
+    let remote_commit = remote_branch.peel_to_commit()?;
+    debug!("0.5");
+    let remote_oid = remote_commit.id();
+    debug!("check_if_up_to_date exit");
+    Ok(branch_oid == remote_oid)
+}
+
+fn is_branch_merged(repo: &Repository, branch_name: &str) -> Result<bool, Error> {
+    let branch = repo.find_branch(branch_name, BranchType::Remote)?;
+    let branch_commit = branch.get().peel_to_commit()?;
+    let merge_base = repo.merge_base(repo.head()?.target().unwrap(), branch_commit.id())?;
+    Ok(merge_base == branch_commit.id())
+}
+
+fn get_commit_age(commit_time: Time) -> String {
+    let commit_timestamp = commit_time.seconds();
+    let commit_duration = SystemTime::UNIX_EPOCH + Duration::from_secs(commit_timestamp as u64);
+    let now = SystemTime::now();
+    let age = now.duration_since(commit_duration).unwrap_or_else(|_| Duration::from_secs(0));
+
+    let days = age.as_secs() / 86400;
+    let hours = (age.as_secs() % 86400) / 3600;
+    let minutes = (age.as_secs() % 3600) / 60;
+
+    if days > 0 {
+        format!("{} days ago", days)
+    } else if hours > 0 {
+        format!("{} hours ago", hours)
+    } else {
+        format!("{} minutes ago", minutes)
+    }
+}
+
 #[tauri::command]
 pub(crate) fn get_repo_details() -> Result<RepoDetails, GitFrontendError> {
     let config = CONFIG.get().unwrap().lock().unwrap();
@@ -728,66 +900,84 @@ pub(crate) fn get_repo_details() -> Result<RepoDetails, GitFrontendError> {
     let repo = Repository::open(repo_path)?;
 
     // Repository name (assuming the directory name as repo name)
-    let repo_name = repo_path.to_str().unwrap().split('/').last().unwrap_or("").to_string();
+    // let repo_name = repo_path.to_str().unwrap().split('/').last().unwrap_or("").to_string();
 
     // Repository description (read from .git/description if available)
     let description = repo.path().parent().and_then(|path| std::fs::read_to_string(path.join("description")).ok());
 
     // Repository URL (read from .git/config)
-    let config = repo.config()?;
-    let remote_url = config.get_string("remote.origin.url").unwrap_or_else(|_| "No URL found".to_string());
+    // let config = repo.config()?;
+    // let remote_url = config.get_string("remote.origin.url").unwrap_or_else(|_| "No URL found".to_string());
 
-    let mut remotes = Vec::new();
-    // debug!("repo Remotes: {:?}",repo.remotes().unwrap());
-    debug!("repo Remotes sizes: {}",repo.remotes()?.len());
-    for remote_name in repo.remotes()?.iter().flatten() {
+    let mut remotes_details = Vec::new();
+    // Get the list of all remotes
+    let remotes = repo.remotes()?;
+
+    // Iterate over each remote
+    for remote_name in remotes.iter().filter_map(|r| r) {
+        //.flatten() {
+        // Get the remote by name
         let remote = repo.find_remote(remote_name)?;
-        
-        // let fetch_refspecs: Vec<String> = remote.fetch_refspecs()
-        //     .iter()
-        //     .map(|spec| spec.to_str().unwrap_or("Invalid refspec").to_string())
-        //     .collect();
 
-        // let fetch_refspecs: Vec<String> = remote.fetch_refspecs().iter().filter_map(|spec| spec.ok()).map(|spec| spec.to_string()).collect();
+        // Fetch URL and Push URL
+        let fetch_url = remote.url().unwrap_or("No fetch URL found");
+        let push_url = remote.pushurl().unwrap_or("No push URL found");
 
-        // let fetch_refspecs: Vec<String> = remote.fetch_refspecs()
-        //     .iter()
-        //     .map(|spec| spec.to_string())
-        //     .collect();
+        debug!("* remote {}", remote_name);
+        debug!("  Fetch URL: {}", fetch_url);
+        debug!("  Push URL: {}", push_url);
 
-        let mut fetch_refspecs: Vec<String> = vec![];
-        let fetch_refspecs2/*: Vec<String>*/ = remote.fetch_refspecs().unwrap();
-        println!("The refspecs2 size is: {}",fetch_refspecs2.len());
-        // Iterate over the fetch refspecs
-        for refspec in fetch_refspecs2.iter() {
-            //if let Some(spec) = refspec.ok() {
-            //if 
-            let spec = refspec.ok_or("Invalid refspec").unwrap();// {
-                println!("{}", spec);
-                fetch_refspecs.push(spec.to_string());
-            // } else {
-            //     println!();
-            // }
-        }
+        // Fetch Refspecs
+        debug!("  Fetch Refspecs:");
+        let fetch_urls = {
+            let fetch_refspecs = remote.fetch_refspecs().unwrap();
+            let mut temp_urls = Vec::new();
+            for fetch_refspec in fetch_refspecs.iter() {
+                let refspec = fetch_refspec.ok_or("Invalid refspec").unwrap();
+                debug!("{}", refspec);
+                temp_urls.push(refspec.to_string());
+            }
+            temp_urls
+        };
 
-        // println!("The refspecs size is: {}",fetch_refspecs.len());
-        let remote_details = RemoteDetails {
+        // Push Refspecs
+        debug!("  Push Refspecs:");
+        let push_urls = {
+            let push_refspecs = remote.push_refspecs().unwrap();
+            let mut temp_urls = Vec::new();
+            for push_refspec in push_refspecs.iter() {
+                let refspec = push_refspec.ok_or("Invalid refspec").unwrap();
+                debug!("{}", refspec);
+                temp_urls.push(refspec.to_string());
+            }
+            temp_urls
+        };
+        debug!("");
+        let pull_local_branches = list_branches_for_remote(&repo, remote_name, "pull")?;
+        debug!("AAA");
+        let push_local_branches = list_branches_for_remote(&repo, remote_name, "push")?;
+        debug!("BBB");
+        let remote_branches = list_remote_branches(&repo, remote_name)?;
+        debug!("CCC");
+        let remote_details: RemoteDetails = RemoteDetails {
             name: remote_name.to_string(),
-            url: remote.url().unwrap_or("No URL found").to_string(),
-            push_url: remote.pushurl().map(|url| url.to_string()),
-            fetch: fetch_refspecs, //todo!("fetch_refspecs", fetch_refspecs), // fetch_refspecs,
+            fetch_url: fetch_url.to_string(),
+            push_url: push_url.to_string(),
+            fetch_refspecs: fetch_urls,
+            push_refspecs: push_urls,
+            local_branches_configured_for_git_pull: pull_local_branches,
+            local_branches_configured_for_git_push: push_local_branches,
+            remote_branches: remote_branches,
         };
         debug!("remote_details end");
-        remotes.push(remote_details);
+        remotes_details.push(remote_details);
     }
 
-    // let remotes2 = repo.remotes()?.iter().filter_map(|name| name.map(String::from)).collect::<Vec<_>>();
-
-    let branches = repo
-        .branches(None)?
-        .filter_map(|branch| branch.ok())
-        .filter_map(|(branch, _)| branch.name().ok().flatten().map(|name| name.to_string()))
-        .collect::<Vec<_>>();
+    // let branches = repo
+    //     .branches(None)?
+    //     .filter_map(|branch| branch.ok())
+    //     .filter_map(|(branch, _)| branch.name().ok().flatten().map(|name| name.to_string()))
+    //     .collect::<Vec<_>>();
 
     let head = repo.head()?;
 
@@ -799,12 +989,25 @@ pub(crate) fn get_repo_details() -> Result<RepoDetails, GitFrontendError> {
 
     let tags = repo.tag_names(None)?.iter().filter_map(|name| name.map(String::from)).collect::<Vec<_>>();
 
+    //Get the default pull and push remotes
+    let config = repo.config()?;
+
+    let default_push_remote =
+        match find_default_remote(&config, &format!("remote.pushDefault")).or_else(|| find_default_remote(&config, &format!("branch.{}.remote", default_branch_name))) {
+            Some(push) => push,
+            None => "No default push remote found".to_string(),
+        };
+    let default_pull_remote = match find_default_remote(&config, &format!("branch.{}.remote", default_branch_name)) {
+        Some(pull) => pull,
+        None => "No current pull remote found(this means the active branch is not asociated to a remote branch)".to_string(),
+    };
+
     Ok(RepoDetails {
-        name: repo_name,
+        // name: repo_name,
         description,
-        url: remote_url,
-        remotes: remotes,
-        branches,
+        // url: remote_url,
+        remotes: remotes_details,
+        // branches,
         tags,
         contributors: vec![],              // git2 does not provide contributor information directly
         forks: 0,                          // git2 does not provide fork information
@@ -815,9 +1018,9 @@ pub(crate) fn get_repo_details() -> Result<RepoDetails, GitFrontendError> {
         updated_at: "Unknown".to_string(), // git2 does not provide update date information
         default_branch_name,
         default_full_branch_name,
-        default_push_remote: "origin".to_string(), // Assuming "origin" as default push remote
-        default_pull_remote: "origin".to_string(), // Assuming "origin" as default pull remote
-        git_settings: vec![],                      // Placeholder, git2 does not provide detailed settings
+        default_push_remote: default_push_remote,
+        default_pull_remote: default_pull_remote,
+        git_settings: vec![], // Placeholder, git2 does not provide detailed settings
     })
 }
 
