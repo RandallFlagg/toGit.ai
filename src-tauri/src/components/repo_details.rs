@@ -1,5 +1,7 @@
 use serde::Serialize;
+use crate::components::branch_info::BranchInfo;
 
+//TODO: Take this out to a seperate file?
 #[derive(Debug, Serialize)]
 pub struct RemoteDetails {
     pub name: String,
@@ -9,7 +11,7 @@ pub struct RemoteDetails {
     pub fetch_refspecs: Vec<String>,
     pub local_branches_configured_for_git_pull: Vec<String>,
     pub local_branches_configured_for_git_push: Vec<String>,
-    pub remote_branches: Vec<String>,
+    pub remote_branches: Vec<BranchInfo>,
 }
 
 #[derive(Debug, Serialize)]

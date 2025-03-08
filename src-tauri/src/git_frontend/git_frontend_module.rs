@@ -32,6 +32,7 @@ use tauri::{path, App, AppHandle, Emitter};
 
 use crate::components::file_metadata::FileMetadata;
 use crate::components::git_frontend_error::GitFrontendError;
+use crate::components::branch_info::BranchInfo;
 use crate::components::repo_details::RemoteDetails;
 use crate::components::repo_details::RepoDetails;
 use crate::git_frontend::app_config::AppConfig;
@@ -781,7 +782,7 @@ fn list_branches_for_remote(repo: &Repository, remote_name: &str, direction: &st
     Ok(results)
 }
 
-fn list_remote_branches(repo: &Repository, remote_name: &str) -> Result<Vec<String>, Error> {
+fn list_remote_branches(repo: &Repository, remote_name: &str) -> Result<Vec<BranchInfo>, Error> {
     let mut results = Vec::new();
     let branches = repo.branches(Some(BranchType::Remote))?;
     for branch in branches {
@@ -797,14 +798,16 @@ fn list_remote_branches(repo: &Repository, remote_name: &str) -> Result<Vec<Stri
             let last_commit_author = commit.author().name().unwrap_or("Unknown author").to_string();
             let is_merged = is_branch_merged(repo, &name)?;
 
-            if let Some(tracking) = tracking_branch {
-                results.push(format!("{}      last updated {}    tracked by {}", name, commit_age, tracking));
-            } else {
-                results.push(format!("{}      last updated {}", name, commit_age));
-            }
-            results.push(format!("    Last commit: {}", last_commit_message));
-            results.push(format!("    Author: {}", last_commit_author));
-            results.push(format!("    Merged: {}", is_merged));
+            let branch_info = BranchInfo {
+                name,
+                commit_age,
+                tracking_branch,
+                last_commit_message,
+                last_commit_author,
+                is_merged,
+            };
+
+            results.push(branch_info);
         }
     }
     Ok(results)

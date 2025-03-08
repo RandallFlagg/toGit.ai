@@ -8,25 +8,17 @@
     let selectedRemote = "origin";
     let selectedBranch = [];
 
-    const fetchRepoDetails = async () => {
-        try {
-            console.log("A");
-            repoDetails =
-                await window.__TAURI__.core.invoke("get_repo_details");
-            console.log(repoDetails);
-        } catch (err) {
-            console.log("B");
-            error = err;
-        }
-    };
-
     const selectRemote = (remote) => {
-        selectedRemote = remote;
-        selectedBranch = remote.remote_branches[0].split(" ");
+                // selectedRemote = repoDetails.remotes[0];
+                // selectedBranch = selectedRemote.remote_branches[0];
+                selectedRemote = remote;
+                console.log("selectedRemote: ", selectedRemote);
+                selectedBranch = remote.remote_branches[0];
+                console.log("selectedBranch: ",selectedBranch);
     };
 
     const selectBranch = (branch) => {
-        selectedBranch = branch.split(" ");
+        selectedBranch = branch;//.split(" ");
     };
 
     // Function to check if the URL starts with http, https, or ssh
@@ -62,6 +54,22 @@
     };
 
     onMount(async () => {
+        const fetchRepoDetails = async () => {
+            let result;
+            try {
+                console.log("A");
+                result =
+                    await window.__TAURI__.core.invoke("get_repo_details");
+                console.log(result);
+            } catch (err) {
+                console.log("B");
+                error = err;
+                result = null;
+            }
+
+            return result;
+        };
+
         function parseGitUrl(url) {
             let owner, repo;
 
@@ -97,10 +105,9 @@
         }
 
         // Fetch repo details when the component mounts
-        await fetchRepoDetails();
+        repoDetails = await fetchRepoDetails();
 
-        selectedRemote = repoDetails.remotes[0];
-        selectedBranch = selectedRemote.remote_branches[0].split(" ");
+        selectRemote(repoDetails.remotes[0]);
 
         for (const remote of repoDetails.remotes) {
             const info = parseGitUrl(remote.fetch_url);
@@ -240,7 +247,7 @@
                     Remote: {selectedRemote.name}
                 </h3> -->
                 <div class="paragraph">
-                    <label for="fetchUrl">Fetch URL:</label>
+                    <label for="fetchUrl">Fetch URL</label>
                     <input
                         id="fetchUrl"
                         class="textbox"
@@ -260,9 +267,9 @@
                     </button>
                 </div>
                 <div class="paragraph">
-                    <label for="fetchUrl">Push URL:</label>
+                    <label for="pushUrl">Push URL</label>
                     <input
-                        id="fetchUrl"
+                        id="pushUrl"
                         class="textbox"
                         type="text"
                         bind:value={selectedRemote.push_url}
@@ -352,23 +359,31 @@
                                 : ''}"
                             on:click={() => selectBranch(branch)}
                         >
-                            <li class="list-item">{branch}</li>
-                        </div>
-                    {/each}
-                </div>
-
-                <div class="branch-details">
-                    <ul class="list">
-                        <li>{selectedBranch.length}</li>
-                        {#each selectedBranch as branchInfo}
-                            <li>branch: {branchInfo}</li>
                             <li class="list-item">
-                                Last commit: {branchInfo[1]}
-                                Author: {branchInfo[2]}
-                                Merged: {branchInfo[3]}
+                                <span class="branch-name">{branch.name}</span>
                             </li>
-                        {/each}
-                    </ul>
+                        </div>
+
+                        {#if selectedBranch === branch}
+                            <h4 class="branch-title">Branch Information</h4>
+                            <div class="branch-status">
+                                Last updated {branch.commit_age}
+                                {#if branch.tracking_branch}
+                                    , tracked by {branch.tracking_branch}
+                                {/if}
+                                <br />
+                                Last commit: {branch.last_commit_message}
+                                <br />
+                                Author: {branch.last_commit_author}
+                                <br />
+                                Merged: {branch.is_merged}
+                                <br />
+                                Tags: {#each branch.tags as tag}
+                                    {tag.name} ({tag.message || "No message"})
+                                {/each}
+                            </div>
+                        {/if}
+                    {/each}
                 </div>
             </div>
         </section>
@@ -1015,5 +1030,74 @@
     .arrow-down {
         color: #e74c3c; /* Red arrow */
         font-size: 1.75rem; /* Adjust the size as needed */
+    }
+
+    .branch-title {
+        font-family: "Arial", sans-serif;
+        font-size: 1.2rem;
+        color: #333;
+        margin-bottom: 0.5rem;
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 0.2rem;
+    }
+
+    .branch-list {
+        list-style-type: none;
+        padding-left: 0;
+        margin-bottom: 1rem;
+    }
+
+    .branch-item {
+        display: flex;
+        flex-direction: column;
+        padding: 0.5rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        margin-bottom: 0.5rem;
+        transition: background-color 0.3s ease;
+    }
+
+    .branch-item:hover {
+        background-color: #f1f1f1;
+    }
+
+    .branch-name {
+        font-weight: bold;
+        color: #2c3e50;
+    }
+
+    .branch-status {
+        font-style: italic;
+        color: #7f8c8d;
+    }
+
+    .branch-status.up-to-date {
+        color: #27ae60;
+    }
+
+    .branch-status.local-out-of-date {
+        color: #e74c3c;
+    }
+
+    .branch-status.remote-out-of-date {
+        color: #e67e22;
+    }
+
+    .branch-status.divergent {
+        color: #f39c12;
+    }
+
+    .arrow-up {
+        color: #3498db; /* Blue arrow */
+        font-size: 1.5rem; /* Adjust the size as needed */
+    }
+
+    .arrow-down {
+        color: #e74c3c; /* Red arrow */
+        font-size: 1.5rem; /* Adjust the size as needed */
+    }
+
+    .active {
+        background-color: #e0f7fa;
     }
 </style>
