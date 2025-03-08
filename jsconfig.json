@@ -53,7 +53,7 @@
     "src/**/*.js",
     // "src/**/*.jsx",
     // "src/**/*.json",
-    "src/**/*.vue",
+    // "src/**/*.vue",
     // "src/**/*.d.ts",
     "src/**/*.svelte"
   ]

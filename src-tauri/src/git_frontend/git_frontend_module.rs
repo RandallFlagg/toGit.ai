@@ -736,8 +736,10 @@ fn list_branches_for_remote(repo: &Repository, remote_name: &str, direction: &st
         let (branch, _) = branch?;
         let name = branch.name()?.unwrap_or_default().to_string();
         let branch_remote = repo.config()?.get_string(&format!("branch.{}.remote", name)).unwrap_or_default();
-        debug!("1");
+        debug!("branch_remote: {}", branch_remote);
+        debug!("remote_name: {}", remote_name);
         if branch_remote == remote_name {
+            debug!("1");
             let merge_or_push = match direction {
                 "pull" => repo.config()?.get_string(&format!("branch.{}.merge", name)).unwrap_or_default(),
                 "push" => repo.config()?.get_string(&format!("branch.{}.push", name)).unwrap_or_default(),
@@ -811,18 +813,17 @@ fn list_remote_branches(repo: &Repository, remote_name: &str) -> Result<Vec<Stri
 fn find_tracking_branch(repo: &Repository, remote_branch_name: &str) -> Result<Option<String>, Error> {
     let branches = repo.branches(Some(BranchType::Local))?;
     for branch in branches {
+        println!("####################################################################");
         let (branch, _) = branch?;
         let name = branch.name()?.unwrap_or_default().to_string();
-        let merge = repo.config()?.get_string(&format!("branch.{}.merge", name)).unwrap_or_default();
+        let upstream_ref = repo.config()?.get_string(&format!("branch.{}.merge", name)).unwrap_or_default();
 
         // Debug prints to understand the issue
         println!("Checking if local branch '{}' merges with remote branch '{}'", name, remote_branch_name);
-        println!("Local branch merge ref: '{}'", merge);
+        println!("Local branch merge ref: '{}'", upstream_ref);
         println!("Remote branch name: '{}'", remote_branch_name);
 
-        let remote_branch_stripped = remote_branch_name.strip_prefix(&format!("{}/", branch_remote(remote_branch_name)?)).unwrap_or(remote_branch_name);
-
-        if merge.ends_with(remote_branch_stripped) {
+        if !upstream_ref.is_empty() && remote_branch_name.ends_with(upstream_ref.strip_prefix("refs/heads/").unwrap_or(&upstream_ref)) {
             return Ok(Some(name));
         }
     }
@@ -893,6 +894,70 @@ fn get_commit_age(commit_time: Time) -> String {
     }
 }
 
+fn get_push_status(repo: &Repository, branch_name: &str, remote_name: &str) -> Result<Option<String>, Error> {
+    println!("5");
+    let local_branch = repo.find_branch(branch_name, BranchType::Local)?;
+    println!("6");
+    let local_commit = local_branch.get().peel_to_commit()?;
+    println!("7");
+    let local_oid = local_commit.id();
+    println!("8");
+
+    let remote_branch_ref = format!("refs/remotes/{}/{}", remote_name, branch_name);
+    println!("9");
+
+    // Check if the remote branch reference is valid and exists
+    let remote_branch = match repo.find_reference(&remote_branch_ref) {
+        Ok(branch) => branch,
+        Err(e) => {
+            println!("Failed to resolve remote branch ref '{}': {}", remote_branch_ref, e);
+            return Ok(None);// Ok("remote branch not found".to_string()); // Gracefully handle the error
+        },
+    };
+    
+    println!("10");
+    let remote_commit = remote_branch.peel_to_commit()?;
+    println!("1");
+    let remote_oid = remote_commit.id();
+    println!("12");
+
+    let (ahead, behind) = repo.graph_ahead_behind(local_oid, remote_oid)?;
+    println!("13");
+
+    let status = if ahead == 0 && behind == 0 {
+        "up to date".to_string()
+    } else if ahead > 0 && behind == 0 {
+        format!("{} commits ahead (remote out of date)", ahead)
+    } else if ahead == 0 && behind > 0 {
+        format!("{} commits behind (local out of date)", behind)
+    } else {
+        format!("{} commits ahead, {} commits behind (local and remote are out of date - divergent)", ahead, behind)
+    };
+
+    println!("14");
+    Ok(Some(status))
+}
+
+fn list_branches_for_remote_push_status(repo: &Repository, remote_name: &str) -> Result<Vec<String>, Error> {
+    println!("1");
+    let mut results = Vec::new();
+    println!("2");
+    let branches = repo.branches(Some(BranchType::Local))?;
+    println!("3");
+    for branch in branches {
+        let (branch, _) = branch?;
+        let name = branch.name()?.unwrap_or_default().to_string();
+
+        // Get push status
+        match get_push_status(repo, &name, remote_name)? {
+            Some(status) => results.push(format!("{} pushes to {} ({})", name, name, status)),
+            None => continue,//results.push(format!("{} does not have a corresponding remote branch", name)),
+        }
+    }
+    println!("4");
+    Ok(results)
+}
+
 #[tauri::command]
 pub(crate) fn get_repo_details() -> Result<RepoDetails, GitFrontendError> {
     let config = CONFIG.get().unwrap().lock().unwrap();
@@ -954,11 +1019,9 @@ pub(crate) fn get_repo_details() -> Result<RepoDetails, GitFrontendError> {
         };
         debug!("");
         let pull_local_branches = list_branches_for_remote(&repo, remote_name, "pull")?;
-        debug!("AAA");
-        let push_local_branches = list_branches_for_remote(&repo, remote_name, "push")?;
-        debug!("BBB");
+        let push_status = list_branches_for_remote_push_status(&repo, remote_name)?;
+        let push_local_branches = push_status; //list_branches_for_remote(&repo, remote_name, "push")?;
         let remote_branches = list_remote_branches(&repo, remote_name)?;
-        debug!("CCC");
         let remote_details: RemoteDetails = RemoteDetails {
             name: remote_name.to_string(),
             fetch_url: fetch_url.to_string(),

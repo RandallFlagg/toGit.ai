@@ -1,11 +1,14 @@
 <script>
+    import { fork_stub_data } from "./stub.js";
     import { onMount } from "svelte";
 
-    let repoDetails; // = null;
-    let error; // = null;
+    let repoDetails;
+    let error;
     let forks = [];
+    let selectedRemote = "origin";
+    let selectedBranch = [];
 
-    async function fetchRepoDetails() {
+    const fetchRepoDetails = async () => {
         try {
             console.log("A");
             repoDetails =
@@ -15,7 +18,48 @@
             console.log("B");
             error = err;
         }
-    }
+    };
+
+    const selectRemote = (remote) => {
+        selectedRemote = remote;
+        selectedBranch = remote.remote_branches[0].split(" ");
+    };
+
+    const selectBranch = (branch) => {
+        selectedBranch = branch.split(" ");
+    };
+
+    // Function to check if the URL starts with http, https, or ssh
+    const testShowOpenButton = (url) => {
+        return /^(https?|ssh):/.test(url);
+    };
+
+    const getPullStatus = (pullBranch) => {
+        if (pullBranch.includes("rebases onto")) {
+            return "Rebases onto remote branch";
+        } else if (pullBranch.includes("merges with")) {
+            return "Merges with remote branch";
+        } else {
+            return "Unknown status";
+        }
+    };
+
+    const getPushStatus = (pushBranch) => {
+        if (pushBranch.includes("up to date")) {
+            return "up-to-date";
+        } else if (
+            pushBranch.includes("commits ahead") &&
+            pushBranch.includes("commits behind")
+        ) {
+            return "divergent";
+        } else if (pushBranch.includes("commits ahead")) {
+            return "remote out of date";
+        } else if (pushBranch.includes("commits behind")) {
+            return "local out of date";
+        } else {
+            return "Unknown status";
+        }
+    };
 
     onMount(async () => {
         function parseGitUrl(url) {
@@ -54,12 +98,16 @@
 
         // Fetch repo details when the component mounts
         await fetchRepoDetails();
+
+        selectedRemote = repoDetails.remotes[0];
+        selectedBranch = selectedRemote.remote_branches[0].split(" ");
+
         for (const remote of repoDetails.remotes) {
             const info = parseGitUrl(remote.fetch_url);
             console.log(info);
             if (false) {
                 //TODO: Need to autenticate to get higher API calls
-                //Inorder to save aPI calls this is disabled
+                //Inorder to save aPI calls this is disabled and I am using a mock instead
                 const source = await fetchForkSource(info.owner, info.repo);
                 if (source) {
                     console.log(`Original repo owner: ${source.owner}`);
@@ -72,955 +120,13 @@
                         `https://api.github.com/repos/${info.owner}/${info.repo}/forks`,
                     );
 
-                    //forks.push(await forkResponse.json());
-                    const data = await forkResponse.json();
-                    forks = [...data];
+                    //forks.push(await ...(forkResponse.json()));
+                    const forks_data = await forkResponse.json();
+                    forks = [...forks_data];
                     console.log("Done.");
                 }
             } else {
-                const data = [
-                    {
-                        id: 677639753,
-                        node_id: "R_kgDOKGP2SQ",
-                        name: "OpenImageViewer",
-                        full_name: "mfkiwl/OpenImageViewer",
-                        private: false,
-                        owner: {
-                            login: "mfkiwl",
-                            id: 3277000,
-                            node_id: "MDQ6VXNlcjMyNzcwMDA=",
-                            avatar_url:
-                                "https://avatars.githubusercontent.com/u/3277000?v=4",
-                            gravatar_id: "",
-                            url: "https://api.github.com/users/mfkiwl",
-                            html_url: "https://github.com/mfkiwl",
-                            followers_url:
-                                "https://api.github.com/users/mfkiwl/followers",
-                            following_url:
-                                "https://api.github.com/users/mfkiwl/following{/other_user}",
-                            gists_url:
-                                "https://api.github.com/users/mfkiwl/gists{/gist_id}",
-                            starred_url:
-                                "https://api.github.com/users/mfkiwl/starred{/owner}{/repo}",
-                            subscriptions_url:
-                                "https://api.github.com/users/mfkiwl/subscriptions",
-                            organizations_url:
-                                "https://api.github.com/users/mfkiwl/orgs",
-                            repos_url:
-                                "https://api.github.com/users/mfkiwl/repos",
-                            events_url:
-                                "https://api.github.com/users/mfkiwl/events{/privacy}",
-                            received_events_url:
-                                "https://api.github.com/users/mfkiwl/received_events",
-                            type: "User",
-                            user_view_type: "public",
-                            site_admin: false,
-                        },
-                        html_url: "https://github.com/mfkiwl/OpenImageViewer",
-                        description:
-                            "Open image viewer is a hardware accelerated open code c++20 compliant cross platform 'C' library and application for viewing and manipulating images.",
-                        fork: true,
-                        url: "https://api.github.com/repos/mfkiwl/OpenImageViewer",
-                        forks_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/forks",
-                        keys_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/keys{/key_id}",
-                        collaborators_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/collaborators{/collaborator}",
-                        teams_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/teams",
-                        hooks_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/hooks",
-                        issue_events_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/issues/events{/number}",
-                        events_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/events",
-                        assignees_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/assignees{/user}",
-                        branches_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/branches{/branch}",
-                        tags_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/tags",
-                        blobs_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/git/blobs{/sha}",
-                        git_tags_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/git/tags{/sha}",
-                        git_refs_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/git/refs{/sha}",
-                        trees_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/git/trees{/sha}",
-                        statuses_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/statuses/{sha}",
-                        languages_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/languages",
-                        stargazers_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/stargazers",
-                        contributors_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/contributors",
-                        subscribers_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/subscribers",
-                        subscription_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/subscription",
-                        commits_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/commits{/sha}",
-                        git_commits_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/git/commits{/sha}",
-                        comments_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/comments{/number}",
-                        issue_comment_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/issues/comments{/number}",
-                        contents_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/contents/{+path}",
-                        compare_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/compare/{base}...{head}",
-                        merges_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/merges",
-                        archive_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/{archive_format}{/ref}",
-                        downloads_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/downloads",
-                        issues_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/issues{/number}",
-                        pulls_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/pulls{/number}",
-                        milestones_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/milestones{/number}",
-                        notifications_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/notifications{?since,all,participating}",
-                        labels_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/labels{/name}",
-                        releases_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/releases{/id}",
-                        deployments_url:
-                            "https://api.github.com/repos/mfkiwl/OpenImageViewer/deployments",
-                        created_at: "2023-08-12T06:14:21Z",
-                        updated_at: "2023-08-12T06:14:36Z",
-                        pushed_at: "2023-08-12T00:26:14Z",
-                        git_url: "git://github.com/mfkiwl/OpenImageViewer.git",
-                        ssh_url: "git@github.com:mfkiwl/OpenImageViewer.git",
-                        clone_url:
-                            "https://github.com/mfkiwl/OpenImageViewer.git",
-                        svn_url: "https://github.com/mfkiwl/OpenImageViewer",
-                        homepage: "",
-                        size: 1941,
-                        stargazers_count: 1,
-                        watchers_count: 1,
-                        language: null,
-                        has_issues: false,
-                        has_projects: true,
-                        has_downloads: true,
-                        has_wiki: true,
-                        has_pages: false,
-                        has_discussions: false,
-                        forks_count: 0,
-                        mirror_url: null,
-                        archived: false,
-                        disabled: false,
-                        open_issues_count: 0,
-                        license: {
-                            key: "other",
-                            name: "Other",
-                            spdx_id: "NOASSERTION",
-                            url: null,
-                            node_id: "MDc6TGljZW5zZTA=",
-                        },
-                        allow_forking: true,
-                        is_template: false,
-                        web_commit_signoff_required: false,
-                        topics: [],
-                        visibility: "public",
-                        forks: 0,
-                        open_issues: 0,
-                        watchers: 1,
-                        default_branch: "master",
-                    },
-                    {
-                        id: 675764169,
-                        node_id: "R_kgDOKEdXyQ",
-                        name: "OpenImageViewer",
-                        full_name: "webstorage119/OpenImageViewer",
-                        private: false,
-                        owner: {
-                            login: "webstorage119",
-                            id: 44592032,
-                            node_id: "MDQ6VXNlcjQ0NTkyMDMy",
-                            avatar_url:
-                                "https://avatars.githubusercontent.com/u/44592032?v=4",
-                            gravatar_id: "",
-                            url: "https://api.github.com/users/webstorage119",
-                            html_url: "https://github.com/webstorage119",
-                            followers_url:
-                                "https://api.github.com/users/webstorage119/followers",
-                            following_url:
-                                "https://api.github.com/users/webstorage119/following{/other_user}",
-                            gists_url:
-                                "https://api.github.com/users/webstorage119/gists{/gist_id}",
-                            starred_url:
-                                "https://api.github.com/users/webstorage119/starred{/owner}{/repo}",
-                            subscriptions_url:
-                                "https://api.github.com/users/webstorage119/subscriptions",
-                            organizations_url:
-                                "https://api.github.com/users/webstorage119/orgs",
-                            repos_url:
-                                "https://api.github.com/users/webstorage119/repos",
-                            events_url:
-                                "https://api.github.com/users/webstorage119/events{/privacy}",
-                            received_events_url:
-                                "https://api.github.com/users/webstorage119/received_events",
-                            type: "User",
-                            user_view_type: "public",
-                            site_admin: false,
-                        },
-                        html_url:
-                            "https://github.com/webstorage119/OpenImageViewer",
-                        description:
-                            "Open image viewer is a hardware accelerated open code c++20 compliant cross platform 'C' library and application for viewing and manipulating images.",
-                        fork: true,
-                        url: "https://api.github.com/repos/webstorage119/OpenImageViewer",
-                        forks_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/forks",
-                        keys_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/keys{/key_id}",
-                        collaborators_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/collaborators{/collaborator}",
-                        teams_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/teams",
-                        hooks_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/hooks",
-                        issue_events_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/issues/events{/number}",
-                        events_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/events",
-                        assignees_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/assignees{/user}",
-                        branches_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/branches{/branch}",
-                        tags_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/tags",
-                        blobs_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/git/blobs{/sha}",
-                        git_tags_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/git/tags{/sha}",
-                        git_refs_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/git/refs{/sha}",
-                        trees_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/git/trees{/sha}",
-                        statuses_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/statuses/{sha}",
-                        languages_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/languages",
-                        stargazers_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/stargazers",
-                        contributors_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/contributors",
-                        subscribers_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/subscribers",
-                        subscription_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/subscription",
-                        commits_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/commits{/sha}",
-                        git_commits_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/git/commits{/sha}",
-                        comments_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/comments{/number}",
-                        issue_comment_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/issues/comments{/number}",
-                        contents_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/contents/{+path}",
-                        compare_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/compare/{base}...{head}",
-                        merges_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/merges",
-                        archive_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/{archive_format}{/ref}",
-                        downloads_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/downloads",
-                        issues_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/issues{/number}",
-                        pulls_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/pulls{/number}",
-                        milestones_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/milestones{/number}",
-                        notifications_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/notifications{?since,all,participating}",
-                        labels_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/labels{/name}",
-                        releases_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/releases{/id}",
-                        deployments_url:
-                            "https://api.github.com/repos/webstorage119/OpenImageViewer/deployments",
-                        created_at: "2023-08-07T17:02:43Z",
-                        updated_at: "2023-08-07T17:02:43Z",
-                        pushed_at: "2022-07-06T03:42:53Z",
-                        git_url:
-                            "git://github.com/webstorage119/OpenImageViewer.git",
-                        ssh_url:
-                            "git@github.com:webstorage119/OpenImageViewer.git",
-                        clone_url:
-                            "https://github.com/webstorage119/OpenImageViewer.git",
-                        svn_url:
-                            "https://github.com/webstorage119/OpenImageViewer",
-                        homepage: "",
-                        size: 2041,
-                        stargazers_count: 0,
-                        watchers_count: 0,
-                        language: null,
-                        has_issues: false,
-                        has_projects: true,
-                        has_downloads: true,
-                        has_wiki: true,
-                        has_pages: false,
-                        has_discussions: false,
-                        forks_count: 0,
-                        mirror_url: null,
-                        archived: false,
-                        disabled: false,
-                        open_issues_count: 0,
-                        license: {
-                            key: "other",
-                            name: "Other",
-                            spdx_id: "NOASSERTION",
-                            url: null,
-                            node_id: "MDc6TGljZW5zZTA=",
-                        },
-                        allow_forking: true,
-                        is_template: false,
-                        web_commit_signoff_required: false,
-                        topics: [],
-                        visibility: "public",
-                        forks: 0,
-                        open_issues: 0,
-                        watchers: 0,
-                        default_branch: "master",
-                    },
-                    {
-                        id: 539337115,
-                        node_id: "R_kgDOICWhmw",
-                        name: "OpenImageViewer",
-                        full_name: "WilliamQf-AI/OpenImageViewer",
-                        private: false,
-                        owner: {
-                            login: "WilliamQf-AI",
-                            id: 40328063,
-                            node_id: "MDQ6VXNlcjQwMzI4MDYz",
-                            avatar_url:
-                                "https://avatars.githubusercontent.com/u/40328063?v=4",
-                            gravatar_id: "",
-                            url: "https://api.github.com/users/WilliamQf-AI",
-                            html_url: "https://github.com/WilliamQf-AI",
-                            followers_url:
-                                "https://api.github.com/users/WilliamQf-AI/followers",
-                            following_url:
-                                "https://api.github.com/users/WilliamQf-AI/following{/other_user}",
-                            gists_url:
-                                "https://api.github.com/users/WilliamQf-AI/gists{/gist_id}",
-                            starred_url:
-                                "https://api.github.com/users/WilliamQf-AI/starred{/owner}{/repo}",
-                            subscriptions_url:
-                                "https://api.github.com/users/WilliamQf-AI/subscriptions",
-                            organizations_url:
-                                "https://api.github.com/users/WilliamQf-AI/orgs",
-                            repos_url:
-                                "https://api.github.com/users/WilliamQf-AI/repos",
-                            events_url:
-                                "https://api.github.com/users/WilliamQf-AI/events{/privacy}",
-                            received_events_url:
-                                "https://api.github.com/users/WilliamQf-AI/received_events",
-                            type: "User",
-                            user_view_type: "public",
-                            site_admin: false,
-                        },
-                        html_url:
-                            "https://github.com/WilliamQf-AI/OpenImageViewer",
-                        description:
-                            "Open image viewer is a hardware accelerated open code c++20 compliant cross platform 'C' library and application for viewing and manipulating images.",
-                        fork: true,
-                        url: "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer",
-                        forks_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/forks",
-                        keys_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/keys{/key_id}",
-                        collaborators_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/collaborators{/collaborator}",
-                        teams_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/teams",
-                        hooks_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/hooks",
-                        issue_events_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/issues/events{/number}",
-                        events_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/events",
-                        assignees_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/assignees{/user}",
-                        branches_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/branches{/branch}",
-                        tags_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/tags",
-                        blobs_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/git/blobs{/sha}",
-                        git_tags_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/git/tags{/sha}",
-                        git_refs_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/git/refs{/sha}",
-                        trees_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/git/trees{/sha}",
-                        statuses_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/statuses/{sha}",
-                        languages_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/languages",
-                        stargazers_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/stargazers",
-                        contributors_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/contributors",
-                        subscribers_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/subscribers",
-                        subscription_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/subscription",
-                        commits_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/commits{/sha}",
-                        git_commits_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/git/commits{/sha}",
-                        comments_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/comments{/number}",
-                        issue_comment_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/issues/comments{/number}",
-                        contents_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/contents/{+path}",
-                        compare_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/compare/{base}...{head}",
-                        merges_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/merges",
-                        archive_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/{archive_format}{/ref}",
-                        downloads_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/downloads",
-                        issues_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/issues{/number}",
-                        pulls_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/pulls{/number}",
-                        milestones_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/milestones{/number}",
-                        notifications_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/notifications{?since,all,participating}",
-                        labels_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/labels{/name}",
-                        releases_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/releases{/id}",
-                        deployments_url:
-                            "https://api.github.com/repos/WilliamQf-AI/OpenImageViewer/deployments",
-                        created_at: "2022-09-21T06:21:39Z",
-                        updated_at: "2024-03-05T02:10:19Z",
-                        pushed_at: "2024-03-05T02:10:12Z",
-                        git_url:
-                            "git://github.com/WilliamQf-AI/OpenImageViewer.git",
-                        ssh_url:
-                            "git@github.com:WilliamQf-AI/OpenImageViewer.git",
-                        clone_url:
-                            "https://github.com/WilliamQf-AI/OpenImageViewer.git",
-                        svn_url:
-                            "https://github.com/WilliamQf-AI/OpenImageViewer",
-                        homepage: "",
-                        size: 2269,
-                        stargazers_count: 0,
-                        watchers_count: 0,
-                        language: "C++",
-                        has_issues: false,
-                        has_projects: true,
-                        has_downloads: true,
-                        has_wiki: true,
-                        has_pages: false,
-                        has_discussions: false,
-                        forks_count: 0,
-                        mirror_url: null,
-                        archived: false,
-                        disabled: false,
-                        open_issues_count: 0,
-                        license: {
-                            key: "other",
-                            name: "Other",
-                            spdx_id: "NOASSERTION",
-                            url: null,
-                            node_id: "MDc6TGljZW5zZTA=",
-                        },
-                        allow_forking: true,
-                        is_template: false,
-                        web_commit_signoff_required: false,
-                        topics: [],
-                        visibility: "public",
-                        forks: 0,
-                        open_issues: 0,
-                        watchers: 0,
-                        default_branch: "master",
-                    },
-                    {
-                        id: 262526381,
-                        node_id: "MDEwOlJlcG9zaXRvcnkyNjI1MjYzODE=",
-                        name: "OpenImageViewer",
-                        full_name: "sharny/OpenImageViewer",
-                        private: false,
-                        owner: {
-                            login: "sharny",
-                            id: 12163323,
-                            node_id: "MDQ6VXNlcjEyMTYzMzIz",
-                            avatar_url:
-                                "https://avatars.githubusercontent.com/u/12163323?v=4",
-                            gravatar_id: "",
-                            url: "https://api.github.com/users/sharny",
-                            html_url: "https://github.com/sharny",
-                            followers_url:
-                                "https://api.github.com/users/sharny/followers",
-                            following_url:
-                                "https://api.github.com/users/sharny/following{/other_user}",
-                            gists_url:
-                                "https://api.github.com/users/sharny/gists{/gist_id}",
-                            starred_url:
-                                "https://api.github.com/users/sharny/starred{/owner}{/repo}",
-                            subscriptions_url:
-                                "https://api.github.com/users/sharny/subscriptions",
-                            organizations_url:
-                                "https://api.github.com/users/sharny/orgs",
-                            repos_url:
-                                "https://api.github.com/users/sharny/repos",
-                            events_url:
-                                "https://api.github.com/users/sharny/events{/privacy}",
-                            received_events_url:
-                                "https://api.github.com/users/sharny/received_events",
-                            type: "User",
-                            user_view_type: "public",
-                            site_admin: false,
-                        },
-                        html_url: "https://github.com/sharny/OpenImageViewer",
-                        description:
-                            "Open image viewer is an hardware accelerated open code c++17 compliant cross platform 'C' library and application for viewing and manipulating images.",
-                        fork: true,
-                        url: "https://api.github.com/repos/sharny/OpenImageViewer",
-                        forks_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/forks",
-                        keys_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/keys{/key_id}",
-                        collaborators_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/collaborators{/collaborator}",
-                        teams_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/teams",
-                        hooks_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/hooks",
-                        issue_events_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/issues/events{/number}",
-                        events_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/events",
-                        assignees_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/assignees{/user}",
-                        branches_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/branches{/branch}",
-                        tags_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/tags",
-                        blobs_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/git/blobs{/sha}",
-                        git_tags_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/git/tags{/sha}",
-                        git_refs_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/git/refs{/sha}",
-                        trees_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/git/trees{/sha}",
-                        statuses_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/statuses/{sha}",
-                        languages_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/languages",
-                        stargazers_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/stargazers",
-                        contributors_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/contributors",
-                        subscribers_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/subscribers",
-                        subscription_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/subscription",
-                        commits_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/commits{/sha}",
-                        git_commits_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/git/commits{/sha}",
-                        comments_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/comments{/number}",
-                        issue_comment_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/issues/comments{/number}",
-                        contents_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/contents/{+path}",
-                        compare_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/compare/{base}...{head}",
-                        merges_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/merges",
-                        archive_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/{archive_format}{/ref}",
-                        downloads_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/downloads",
-                        issues_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/issues{/number}",
-                        pulls_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/pulls{/number}",
-                        milestones_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/milestones{/number}",
-                        notifications_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/notifications{?since,all,participating}",
-                        labels_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/labels{/name}",
-                        releases_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/releases{/id}",
-                        deployments_url:
-                            "https://api.github.com/repos/sharny/OpenImageViewer/deployments",
-                        created_at: "2020-05-09T08:36:27Z",
-                        updated_at: "2020-05-09T08:36:29Z",
-                        pushed_at: "2020-02-15T16:11:10Z",
-                        git_url: "git://github.com/sharny/OpenImageViewer.git",
-                        ssh_url: "git@github.com:sharny/OpenImageViewer.git",
-                        clone_url:
-                            "https://github.com/sharny/OpenImageViewer.git",
-                        svn_url: "https://github.com/sharny/OpenImageViewer",
-                        homepage: "",
-                        size: 1533,
-                        stargazers_count: 0,
-                        watchers_count: 0,
-                        language: null,
-                        has_issues: false,
-                        has_projects: true,
-                        has_downloads: true,
-                        has_wiki: true,
-                        has_pages: false,
-                        has_discussions: false,
-                        forks_count: 0,
-                        mirror_url: null,
-                        archived: false,
-                        disabled: false,
-                        open_issues_count: 0,
-                        license: {
-                            key: "other",
-                            name: "Other",
-                            spdx_id: "NOASSERTION",
-                            url: null,
-                            node_id: "MDc6TGljZW5zZTA=",
-                        },
-                        allow_forking: true,
-                        is_template: false,
-                        web_commit_signoff_required: false,
-                        topics: [],
-                        visibility: "public",
-                        forks: 0,
-                        open_issues: 0,
-                        watchers: 0,
-                        default_branch: "master",
-                    },
-                    {
-                        id: 107843349,
-                        node_id: "MDEwOlJlcG9zaXRvcnkxMDc4NDMzNDk=",
-                        name: "OpenImageViewerFork",
-                        full_name: "TheNicker/OpenImageViewerFork",
-                        private: false,
-                        owner: {
-                            login: "TheNicker",
-                            id: 4753283,
-                            node_id: "MDQ6VXNlcjQ3NTMyODM=",
-                            avatar_url:
-                                "https://avatars.githubusercontent.com/u/4753283?v=4",
-                            gravatar_id: "",
-                            url: "https://api.github.com/users/TheNicker",
-                            html_url: "https://github.com/TheNicker",
-                            followers_url:
-                                "https://api.github.com/users/TheNicker/followers",
-                            following_url:
-                                "https://api.github.com/users/TheNicker/following{/other_user}",
-                            gists_url:
-                                "https://api.github.com/users/TheNicker/gists{/gist_id}",
-                            starred_url:
-                                "https://api.github.com/users/TheNicker/starred{/owner}{/repo}",
-                            subscriptions_url:
-                                "https://api.github.com/users/TheNicker/subscriptions",
-                            organizations_url:
-                                "https://api.github.com/users/TheNicker/orgs",
-                            repos_url:
-                                "https://api.github.com/users/TheNicker/repos",
-                            events_url:
-                                "https://api.github.com/users/TheNicker/events{/privacy}",
-                            received_events_url:
-                                "https://api.github.com/users/TheNicker/received_events",
-                            type: "User",
-                            user_view_type: "public",
-                            site_admin: false,
-                        },
-                        html_url:
-                            "https://github.com/TheNicker/OpenImageViewerFork",
-                        description:
-                            "OIV, Open image viewer is an hardware accelerated open code c++20 compliant cross platform 'C' library and application for viewing and manipulating images.",
-                        fork: true,
-                        url: "https://api.github.com/repos/TheNicker/OpenImageViewerFork",
-                        forks_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/forks",
-                        keys_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/keys{/key_id}",
-                        collaborators_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/collaborators{/collaborator}",
-                        teams_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/teams",
-                        hooks_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/hooks",
-                        issue_events_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/issues/events{/number}",
-                        events_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/events",
-                        assignees_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/assignees{/user}",
-                        branches_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/branches{/branch}",
-                        tags_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/tags",
-                        blobs_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/git/blobs{/sha}",
-                        git_tags_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/git/tags{/sha}",
-                        git_refs_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/git/refs{/sha}",
-                        trees_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/git/trees{/sha}",
-                        statuses_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/statuses/{sha}",
-                        languages_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/languages",
-                        stargazers_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/stargazers",
-                        contributors_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/contributors",
-                        subscribers_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/subscribers",
-                        subscription_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/subscription",
-                        commits_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/commits{/sha}",
-                        git_commits_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/git/commits{/sha}",
-                        comments_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/comments{/number}",
-                        issue_comment_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/issues/comments{/number}",
-                        contents_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/contents/{+path}",
-                        compare_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/compare/{base}...{head}",
-                        merges_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/merges",
-                        archive_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/{archive_format}{/ref}",
-                        downloads_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/downloads",
-                        issues_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/issues{/number}",
-                        pulls_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/pulls{/number}",
-                        milestones_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/milestones{/number}",
-                        notifications_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/notifications{?since,all,participating}",
-                        labels_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/labels{/name}",
-                        releases_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/releases{/id}",
-                        deployments_url:
-                            "https://api.github.com/repos/TheNicker/OpenImageViewerFork/deployments",
-                        created_at: "2017-10-22T06:41:04Z",
-                        updated_at: "2025-02-21T09:13:27Z",
-                        pushed_at: "2025-02-22T17:40:30Z",
-                        git_url:
-                            "git://github.com/TheNicker/OpenImageViewerFork.git",
-                        ssh_url:
-                            "git@github.com:TheNicker/OpenImageViewerFork.git",
-                        clone_url:
-                            "https://github.com/TheNicker/OpenImageViewerFork.git",
-                        svn_url:
-                            "https://github.com/TheNicker/OpenImageViewerFork",
-                        homepage: "",
-                        size: 2411,
-                        stargazers_count: 0,
-                        watchers_count: 0,
-                        language: "C++",
-                        has_issues: false,
-                        has_projects: true,
-                        has_downloads: true,
-                        has_wiki: true,
-                        has_pages: false,
-                        has_discussions: false,
-                        forks_count: 0,
-                        mirror_url: null,
-                        archived: false,
-                        disabled: false,
-                        open_issues_count: 0,
-                        license: {
-                            key: "other",
-                            name: "Other",
-                            spdx_id: "NOASSERTION",
-                            url: null,
-                            node_id: "MDc6TGljZW5zZTA=",
-                        },
-                        allow_forking: true,
-                        is_template: false,
-                        web_commit_signoff_required: false,
-                        topics: [],
-                        visibility: "public",
-                        forks: 0,
-                        open_issues: 0,
-                        watchers: 0,
-                        default_branch: "master",
-                    },
-                    {
-                        id: 98785234,
-                        node_id: "MDEwOlJlcG9zaXRvcnk5ODc4NTIzNA==",
-                        name: "OIV",
-                        full_name: "RandallFlagg/OIV",
-                        private: false,
-                        owner: {
-                            login: "RandallFlagg",
-                            id: 434681,
-                            node_id: "MDQ6VXNlcjQzNDY4MQ==",
-                            avatar_url:
-                                "https://avatars.githubusercontent.com/u/434681?v=4",
-                            gravatar_id: "",
-                            url: "https://api.github.com/users/RandallFlagg",
-                            html_url: "https://github.com/RandallFlagg",
-                            followers_url:
-                                "https://api.github.com/users/RandallFlagg/followers",
-                            following_url:
-                                "https://api.github.com/users/RandallFlagg/following{/other_user}",
-                            gists_url:
-                                "https://api.github.com/users/RandallFlagg/gists{/gist_id}",
-                            starred_url:
-                                "https://api.github.com/users/RandallFlagg/starred{/owner}{/repo}",
-                            subscriptions_url:
-                                "https://api.github.com/users/RandallFlagg/subscriptions",
-                            organizations_url:
-                                "https://api.github.com/users/RandallFlagg/orgs",
-                            repos_url:
-                                "https://api.github.com/users/RandallFlagg/repos",
-                            events_url:
-                                "https://api.github.com/users/RandallFlagg/events{/privacy}",
-                            received_events_url:
-                                "https://api.github.com/users/RandallFlagg/received_events",
-                            type: "User",
-                            user_view_type: "public",
-                            site_admin: false,
-                        },
-                        html_url: "https://github.com/RandallFlagg/OIV",
-                        description:
-                            "OIV, Open image viewer is an hardware accelerated open code c++17 compliant cross platform 'C' library and application for viewing and manipulating images.",
-                        fork: true,
-                        url: "https://api.github.com/repos/RandallFlagg/OIV",
-                        forks_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/forks",
-                        keys_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/keys{/key_id}",
-                        collaborators_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/collaborators{/collaborator}",
-                        teams_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/teams",
-                        hooks_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/hooks",
-                        issue_events_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/issues/events{/number}",
-                        events_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/events",
-                        assignees_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/assignees{/user}",
-                        branches_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/branches{/branch}",
-                        tags_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/tags",
-                        blobs_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/git/blobs{/sha}",
-                        git_tags_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/git/tags{/sha}",
-                        git_refs_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/git/refs{/sha}",
-                        trees_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/git/trees{/sha}",
-                        statuses_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/statuses/{sha}",
-                        languages_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/languages",
-                        stargazers_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/stargazers",
-                        contributors_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/contributors",
-                        subscribers_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/subscribers",
-                        subscription_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/subscription",
-                        commits_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/commits{/sha}",
-                        git_commits_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/git/commits{/sha}",
-                        comments_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/comments{/number}",
-                        issue_comment_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/issues/comments{/number}",
-                        contents_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/contents/{+path}",
-                        compare_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/compare/{base}...{head}",
-                        merges_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/merges",
-                        archive_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/{archive_format}{/ref}",
-                        downloads_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/downloads",
-                        issues_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/issues{/number}",
-                        pulls_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/pulls{/number}",
-                        milestones_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/milestones{/number}",
-                        notifications_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/notifications{?since,all,participating}",
-                        labels_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/labels{/name}",
-                        releases_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/releases{/id}",
-                        deployments_url:
-                            "https://api.github.com/repos/RandallFlagg/OIV/deployments",
-                        created_at: "2017-07-30T08:36:07Z",
-                        updated_at: "2023-08-01T12:36:37Z",
-                        pushed_at: "2024-11-24T12:17:16Z",
-                        git_url: "git://github.com/RandallFlagg/OIV.git",
-                        ssh_url: "git@github.com:RandallFlagg/OIV.git",
-                        clone_url: "https://github.com/RandallFlagg/OIV.git",
-                        svn_url: "https://github.com/RandallFlagg/OIV",
-                        homepage: null,
-                        size: 3027,
-                        stargazers_count: 0,
-                        watchers_count: 0,
-                        language: "C++",
-                        has_issues: false,
-                        has_projects: true,
-                        has_downloads: true,
-                        has_wiki: true,
-                        has_pages: false,
-                        has_discussions: false,
-                        forks_count: 0,
-                        mirror_url: null,
-                        archived: false,
-                        disabled: false,
-                        open_issues_count: 0,
-                        license: {
-                            key: "other",
-                            name: "Other",
-                            spdx_id: "NOASSERTION",
-                            url: null,
-                            node_id: "MDc6TGljZW5zZTA=",
-                        },
-                        allow_forking: true,
-                        is_template: false,
-                        web_commit_signoff_required: false,
-                        topics: [],
-                        visibility: "public",
-                        forks: 0,
-                        open_issues: 0,
-                        watchers: 0,
-                        default_branch: "master",
-                    },
-                ];
+                const data = fork_stub_data;
                 forks = [...forks, data];
             }
         }
@@ -1099,6 +205,212 @@
     {#if error}
         <p>Error: {error.message}</p>
     {:else if repoDetails}
+        <h1 class="header">Git Repository Information</h1>
+        <section class="section">
+            <h2 class="section-title">Remotes</h2>
+            <!-- <div class="remote-list">
+                {#each repoDetails.remotes as remote}
+                    <div
+                        class="remote-item {selectedRemote === remote
+                            ? 'active'
+                            : ''}"
+                        on:click={() => selectRemote(remote)}
+                    >
+                        <h3 class="remote-title">Remote: {remote.name}</h3>
+                    </div>
+                {/each}
+            </div> -->
+            <nav aria-label="Breadcrumb">
+                <div class="breadcrumb">
+                    {#each repoDetails.remotes as remote}
+                        <button
+                            class="breadcrumb-item {selectedRemote === remote
+                                ? 'active'
+                                : ''}"
+                            on:click={() => selectRemote(remote)}
+                        >
+                            {remote.name}
+                        </button>
+                    {/each}
+                </div>
+            </nav>
+
+            <div class="remote">
+                <!-- <h3 class="remote-title">
+                    Remote: {selectedRemote.name}
+                </h3> -->
+                <div class="paragraph">
+                    <label for="fetchUrl">Fetch URL:</label>
+                    <input
+                        id="fetchUrl"
+                        class="textbox"
+                        type="text"
+                        bind:value={selectedRemote.fetch_url}
+                    />
+                    <button
+                        class="button {testShowOpenButton(
+                            selectedRemote.fetch_url,
+                        )
+                            ? 'show'
+                            : ''}"
+                        on:click={() =>
+                            window.open(selectedRemote.fetch_url, "_blank")}
+                    >
+                        Open URL
+                    </button>
+                </div>
+                <div class="paragraph">
+                    <label for="fetchUrl">Push URL:</label>
+                    <input
+                        id="fetchUrl"
+                        class="textbox"
+                        type="text"
+                        bind:value={selectedRemote.push_url}
+                    />
+                    <button
+                        class="button {testShowOpenButton(
+                            selectedRemote.push_url,
+                        )
+                            ? 'show'
+                            : ''}"
+                        on:click={() =>
+                            window.open(selectedRemote.push_url, "_blank")}
+                    >
+                        Open URL
+                    </button>
+                </div>
+                <p class="paragraph">
+                    Fetch Refspecs: - This should be taken from a different
+                    place. This should b removed. leaving here only until dev is
+                    done.
+                    {#each selectedRemote.fetch_refspecs as fetch_refspec}
+                        <li>{fetch_refspec}</li>
+                    {/each}
+                </p>
+
+                <h4 class="branch-title">
+                    Local Branches Configured for Git Pull
+                </h4>
+                <ul class="list">
+                    {#each selectedRemote.local_branches_configured_for_git_pull as pullBranch}
+                        <li class="list-item">
+                            <span class="branch-name">
+                                {pullBranch.split(" (")[0]}
+                            </span>
+                            <span class="branch-status">
+                                {getPullStatus(pullBranch)}
+                            </span>
+                        </li>
+                    {/each}
+                </ul>
+
+                <h4 class="branch-title">
+                    Local Branches Configured for Git Push
+                </h4>
+                <ul class="list">
+                    {#each selectedRemote.local_branches_configured_for_git_push as pushBranch}
+                        <li class="list-item">
+                            <span class="branch-name">
+                                {pushBranch.split(" (")[0]}
+                            </span>
+                            <span class="branch-status">
+                                {#if pushBranch.includes("up to date")}
+                                    <span class="branch-status up-to-date"
+                                        >Up to date</span
+                                    >
+                                {:else if pushBranch.includes("commits ahead") && pushBranch.includes("commits behind")}
+                                    <span class="arrow-up">⬆️</span>
+                                    {pushBranch.match(/(\d+) commits ahead/)[1]}
+                                    commits ahead,
+                                    <span class="arrow-down">⬇️</span>
+                                    {pushBranch.match(
+                                        /(\d+) commits behind/,
+                                    )[1]} commits behind (divergent)
+                                {:else if pushBranch.includes("commits ahead")}
+                                    <span class="arrow-up">⬆️</span>
+                                    {pushBranch.match(/(\d+) commits ahead/)[1]}
+                                    commits ahead (remote out of date)
+                                {:else if pushBranch.includes("commits behind")}
+                                    <span class="arrow-down">⬇️</span>
+                                    {pushBranch.match(
+                                        /(\d+) commits behind/,
+                                    )[1]} commits behind (local out of date)
+                                {:else}
+                                    Unknown status
+                                {/if}
+                            </span>
+                        </li>
+                    {/each}
+                </ul>
+
+                <h4 class="branch-title">Remote Branches</h4>
+                <div class="branch-list">
+                    {#each selectedRemote.remote_branches as branch}
+                        <div
+                            class="branch-item {selectedBranch === branch
+                                ? 'active'
+                                : ''}"
+                            on:click={() => selectBranch(branch)}
+                        >
+                            <li class="list-item">{branch}</li>
+                        </div>
+                    {/each}
+                </div>
+
+                <div class="branch-details">
+                    <ul class="list">
+                        <li>{selectedBranch.length}</li>
+                        {#each selectedBranch as branchInfo}
+                            <li>branch: {branchInfo}</li>
+                            <li class="list-item">
+                                Last commit: {branchInfo[1]}
+                                Author: {branchInfo[2]}
+                                Merged: {branchInfo[3]}
+                            </li>
+                        {/each}
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">Tags</h2>
+            <ul class="list">
+                {#each repoDetails.tags as tag}
+                    <li class="list-item">{tag}</li>
+                {/each}
+            </ul>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">Default Branch</h2>
+            <p class="paragraph">Name: {repoDetails.default_branch_name}</p>
+            <p class="paragraph">
+                Full Name: {repoDetails.default_full_branch_name}
+            </p>
+            <p class="paragraph">
+                Push Remote: {repoDetails.default_push_remote}
+            </p>
+            <p class="paragraph">
+                Pull Remote: {repoDetails.default_pull_remote}
+            </p>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">Miscellaneous</h2>
+            <p class="paragraph">
+                Contributors: {repoDetails.contributors.length
+                    ? repoDetails.contributors.join(", ")
+                    : "None"}
+            </p>
+            <p class="paragraph">Forks: {repoDetails.forks}</p>
+            <p class="paragraph">Stars: {repoDetails.stars}</p>
+            <p class="paragraph">Language: {repoDetails.language}</p>
+            <p class="paragraph">Size: {repoDetails.size}</p>
+            <p class="paragraph">Created At: {repoDetails.created_at}</p>
+            <p class="paragraph">Updated At: {repoDetails.updated_at}</p>
+        </section>
+
         <div class="section">
             <h2 class="title">Repository Details</h2>
             <ul>
@@ -1395,5 +707,313 @@
     }
     .fork-link:hover {
         text-decoration: underline;
+    }
+
+    .container {
+        width: 80%;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #fff;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+    }
+
+    .header,
+    .section-title,
+    .remote-title,
+    .branch-title {
+        color: #0056b3;
+    }
+
+    .link {
+        color: #0056b3;
+        text-decoration: none;
+    }
+
+    .link:hover {
+        text-decoration: underline;
+    }
+
+    .list {
+        list-style-type: none;
+        padding: 0;
+    }
+
+    .list-item {
+        margin-bottom: 10px;
+    }
+    .remote,
+    .branch-details,
+    .section {
+        margin-bottom: 20px;
+    }
+
+    .branch-details .list .list-item {
+        margin-left: 20px;
+        list-style-type: disc;
+    }
+
+    .remote-list,
+    .branch-list {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .remote-item,
+    .branch-item {
+        cursor: pointer;
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .remote-item:hover,
+    .branch-item:hover {
+        background-color: #f9f9f9;
+    }
+
+    .active {
+        background-color: #e0e0e0;
+    }
+
+    .container {
+        width: 80%;
+        margin: 0 auto;
+        padding: 20px;
+        background-color: #fff;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+    }
+
+    .header,
+    .section-title,
+    .remote-title,
+    .branch-title {
+        color: #0056b3;
+    }
+
+    .link {
+        color: #0056b3;
+        text-decoration: none;
+    }
+
+    .link:hover {
+        text-decoration: underline;
+    }
+
+    .breadcrumb {
+        display: flex;
+        list-style: none;
+        padding: 0;
+    }
+
+    .breadcrumb-item {
+        margin-right: 10px;
+        cursor: pointer;
+    }
+
+    /* .breadcrumb-item::after {
+        content: ">";
+        margin-left: 10px;
+        color: #999;
+    } */
+
+    .breadcrumb-item:last-child::after {
+        content: "";
+    }
+
+    .list {
+        list-style-type: none;
+        padding: 0;
+    }
+
+    .list-item {
+        margin-bottom: 10px;
+    }
+    .remote,
+    .branch-details,
+    .section {
+        margin-bottom: 20px;
+    }
+
+    .branch-details .list .list-item {
+        margin-left: 20px;
+        list-style-type: disc;
+    }
+
+    .branch-list {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .branch-item {
+        cursor: pointer;
+        padding: 10px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .branch-item:hover {
+        background-color: #f9f9f9;
+    }
+
+    .active {
+        background-color: #e0e0e0;
+    }
+
+    .breadcrumb {
+        display: flex;
+        justify-content: space-around; /* Ensures even distribution across the available space */
+        align-items: center;
+        padding: 0;
+        margin: 0;
+        background-color: #f9f9f9;
+        border-radius: 8px;
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .breadcrumb-item {
+        flex: 1; /* Each item takes an equal share of the available space */
+        text-align: center; /* Center the content within each item */
+        padding: 10px;
+        cursor: pointer;
+        background-color: #f5f5f5;
+        border-right: 1px solid #ddd;
+    }
+
+    .breadcrumb-item:last-child {
+        border-right: none;
+    }
+
+    .breadcrumb-item.active {
+        background-color: #e0e0e0;
+        font-weight: bold;
+    }
+
+    .breadcrumb-item:hover {
+        background-color: #f0f0f0;
+    }
+
+    .remote-details {
+        margin-top: 20px;
+        padding: 20px;
+        background-color: #f9f9f9;
+        border-radius: 8px;
+        box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+    }
+
+    .remote-details p {
+        margin: 10px 0;
+    }
+
+    .remote-details a {
+        color: #0056b3;
+        text-decoration: none;
+    }
+
+    .remote-details a:hover {
+        text-decoration: underline;
+    }
+
+    .paragraph {
+        /* font-family: Arial, sans-serif;
+        margin-bottom: 1rem; */
+        /* margin: 5px 0; */
+        display: flex;
+        align-items: center;
+        font-family: Arial, sans-serif;
+        margin-bottom: 1rem;
+    }
+
+    .textbox {
+        width: 500px; /* Adjust width as needed */
+        padding: 0.5rem;
+        font-size: 1rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        margin-right: 1rem;
+    }
+
+    .button {
+        padding: 0.5rem 1rem;
+        font-size: 1rem;
+        color: #fff;
+        background-color: #3498db;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        display: none; /* Default hidden */
+    }
+
+    .button:hover {
+        background-color: #2980b9;
+    }
+
+    .button.show {
+        display: inline-block; /* Show button when condition is met */
+    }
+
+    .branch-title {
+        font-family: "Arial", sans-serif;
+        font-size: 1.2rem;
+        color: #333;
+        margin-bottom: 0.5rem;
+        border-bottom: 2px solid #3498db;
+        padding-bottom: 0.2rem;
+    }
+
+    .list {
+        list-style-type: none;
+        padding-left: 0;
+        margin-bottom: 1rem;
+    }
+
+    .list-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.5rem;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        margin-bottom: 0.5rem;
+        transition: background-color 0.3s ease;
+    }
+
+    .list-item:hover {
+        background-color: #f1f1f1;
+    }
+
+    .branch-name {
+        font-weight: bold;
+        color: #2c3e50;
+    }
+
+    .branch-status {
+        font-style: italic;
+        color: #7f8c8d;
+    }
+
+    .branch-status.up-to-date {
+        color: #27ae60;
+    }
+
+    .branch-status.local-out-of-date {
+        color: #e74c3c;
+    }
+
+    .branch-status.remote-out-of-date {
+        color: #e67e22;
+    }
+
+    .branch-status.divergent {
+        color: #f39c12;
+    }
+
+    .arrow-up {
+        color: #3498db; /* Blue arrow */
+        font-size: 1.75rem; /* Adjust the size as needed */
+    }
+
+    .arrow-down {
+        color: #e74c3c; /* Red arrow */
+        font-size: 1.75rem; /* Adjust the size as needed */
     }
 </style>
