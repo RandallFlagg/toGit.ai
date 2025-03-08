@@ -12,6 +12,18 @@ pub struct RemoteDetails {
     pub local_branches_configured_for_git_pull: Vec<String>,
     pub local_branches_configured_for_git_push: Vec<String>,
     pub remote_branches: Vec<BranchInfo>,
+    pub remote_tags: Vec<TagInfo>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct LocalDetails {
+    pub local_branches: Vec<BranchInfo>,
+    pub local_tags: Vec<TagInfo>,
+    pub default_branch_name: String,
+    pub default_full_branch_name: String,
+    pub default_push_remote: String,
+    pub default_pull_remote: String,
+
 }
 
 #[derive(Debug, Serialize)]
@@ -21,12 +33,7 @@ pub(crate) struct RepoDetails {
     pub description: Option<String>,
     // pub url: String,
     pub remotes: Vec<RemoteDetails>,
-    // pub branches: Vec<String>,
-    pub tags: Vec<String>,
-    pub default_branch_name: String,
-    pub default_full_branch_name: String,
-    pub default_push_remote: String,
-    pub default_pull_remote: String,
+    pub local: Vec<LocalDetails>,
     pub contributors: Vec<String>, // git2 does not provide contributor information directly
     pub forks: usize,              // git2 does not provide fork information
     pub stars: usize,              // git2 does not provide star information

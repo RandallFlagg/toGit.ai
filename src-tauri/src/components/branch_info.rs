@@ -10,3 +10,11 @@ pub struct BranchInfo {
     pub is_merged: bool,
     // tags: Vec<String>, // Add tags field
 }
+
+#[derive(Debug, Serialize)]
+pub struct TagInfo {
+    pub name: String,
+    pub     message: Option<String>,
+    pub tagger: Option<String>,
+    pub tag_date: Option<String>,
+}

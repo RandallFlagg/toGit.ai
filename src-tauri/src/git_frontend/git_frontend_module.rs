@@ -924,7 +924,7 @@ fn get_push_status(repo: &Repository, branch_name: &str, remote_name: &str) -> R
     let remote_oid = remote_commit.id();
     println!("12");
 
-    let (ahead, behind) = repo.graph_ahead_behind(local_oid, remote_oid)?;
+    let (behind, ahead) = repo.graph_ahead_behind(local_oid, remote_oid)?;
     println!("13");
 
     let status = if ahead == 0 && behind == 0 {
@@ -1034,29 +1034,11 @@ pub(crate) fn get_repo_details() -> Result<RepoDetails, GitFrontendError> {
             local_branches_configured_for_git_pull: pull_local_branches,
             local_branches_configured_for_git_push: push_local_branches,
             remote_branches: remote_branches,
+            remote_tags: remote_tags,
         };
         debug!("remote_details end");
         remotes_details.push(remote_details);
     }
-
-    // let branches = repo
-    //     .branches(None)?
-    //     .filter_map(|branch| branch.ok())
-    //     .filter_map(|(branch, _)| branch.name().ok().flatten().map(|name| name.to_string()))
-    //     .collect::<Vec<_>>();
-
-    let head = repo.head()?;
-
-    // Get shorthand name
-    let default_branch_name = head.shorthand().unwrap_or("No branch found").to_string();
-
-    // Get full reference name
-    let default_full_branch_name = head.name().unwrap_or("No branch found").to_string();
-
-    let tags = repo.tag_names(None)?.iter().filter_map(|name| name.map(String::from)).collect::<Vec<_>>();
-
-    //Get the default pull and push remotes
-    let config = repo.config()?;
 
     let default_push_remote =
         match find_default_remote(&config, &format!("remote.pushDefault")).or_else(|| find_default_remote(&config, &format!("branch.{}.remote", default_branch_name))) {
@@ -1067,6 +1049,37 @@ pub(crate) fn get_repo_details() -> Result<RepoDetails, GitFrontendError> {
         Some(pull) => pull,
         None => "No current pull remote found(this means the active branch is not asociated to a remote branch)".to_string(),
     };
+    
+    // Get full reference name
+    let default_full_branch_name = head.name().unwrap_or("No branch found").to_string();
+    
+    // Get shorthand name
+    let default_branch_name = head.shorthand().unwrap_or("No branch found").to_string();
+
+    let local: LocalDetails = LocalDetails {
+        local_tags: vec![],
+        local_branches: vec![],
+        default_branch_name,
+        default_full_branch_name,
+        default_push_remote,
+        default_pull_remote,
+    };
+    // let branches = repo
+    //     .branches(None)?
+    //     .filter_map(|branch| branch.ok())
+    //     .filter_map(|(branch, _)| branch.name().ok().flatten().map(|name| name.to_string()))
+    //     .collect::<Vec<_>>();
+
+    let head = repo.head()?;
+
+
+
+    let tags = repo.tag_names(None)?.iter().filter_map(|name| name.map(String::from)).collect::<Vec<_>>();
+
+    //Get the default pull and push remotes
+    let config = repo.config()?;
+
+    
 
     Ok(RepoDetails {
         // name: repo_name,
@@ -1074,7 +1087,7 @@ pub(crate) fn get_repo_details() -> Result<RepoDetails, GitFrontendError> {
         // url: remote_url,
         remotes: remotes_details,
         // branches,
-        tags,
+        local,
         contributors: vec![],              // git2 does not provide contributor information directly
         forks: 0,                          // git2 does not provide fork information
         stars: 0,                          // git2 does not provide star information
@@ -1082,10 +1095,10 @@ pub(crate) fn get_repo_details() -> Result<RepoDetails, GitFrontendError> {
         size: 0,                           // git2 does not provide repository size information
         created_at: "Unknown".to_string(), // git2 does not provide creation date information
         updated_at: "Unknown".to_string(), // git2 does not provide update date information
-        default_branch_name,
-        default_full_branch_name,
-        default_push_remote: default_push_remote,
-        default_pull_remote: default_pull_remote,
+        // default_branch_name,
+        // default_full_branch_name,
+        // default_push_remote: default_push_remote,
+        // default_pull_remote: default_pull_remote,
         git_settings: vec![], // Placeholder, git2 does not provide detailed settings
     })
 }

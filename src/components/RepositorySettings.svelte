@@ -295,6 +295,18 @@
                     {/each}
                 </p>
 
+                <h4 class="branch-title">Currently Active Branch</h4>
+                    <p class="paragraph">Name: {repoDetails.default_branch_name}</p>
+                    <p class="paragraph">
+                        Full Name: {repoDetails.default_full_branch_name}
+                    </p>
+                    <p class="paragraph">
+                        Push Remote: {repoDetails.default_push_remote}
+                    </p>
+                    <p class="paragraph">
+                        Pull Remote: {repoDetails.default_pull_remote}
+                    </p>
+
                 <h4 class="branch-title">
                     Local Branches Configured for Git Pull
                 </h4>
@@ -395,20 +407,6 @@
                     <li class="list-item">{tag}</li>
                 {/each}
             </ul>
-        </section>
-
-        <section class="section">
-            <h2 class="section-title">Default Branch</h2>
-            <p class="paragraph">Name: {repoDetails.default_branch_name}</p>
-            <p class="paragraph">
-                Full Name: {repoDetails.default_full_branch_name}
-            </p>
-            <p class="paragraph">
-                Push Remote: {repoDetails.default_push_remote}
-            </p>
-            <p class="paragraph">
-                Pull Remote: {repoDetails.default_pull_remote}
-            </p>
         </section>
 
         <section class="section">
